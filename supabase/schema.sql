@@ -94,6 +94,17 @@ CREATE TABLE IF NOT EXISTS public.attendees (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
+-- kit_delivery_stations (mesas de entrega de kit por evento)
+CREATE TABLE IF NOT EXISTS public.kit_delivery_stations (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id        uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  organization_id uuid NOT NULL REFERENCES public.organizations(id),
+  name            text NOT NULL,
+  description     text,
+  active          boolean NOT NULL DEFAULT true,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
 -- tickets (QR)
 CREATE TABLE IF NOT EXISTS public.tickets (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -106,6 +117,9 @@ CREATE TABLE IF NOT EXISTS public.tickets (
   qr_url          text,
   status          text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','used','cancelled')),
   checked_in_at   timestamptz,
+  kit_station_id  uuid REFERENCES public.kit_delivery_stations(id),
+  kit_delivered   boolean NOT NULL DEFAULT false,
+  kit_delivered_at timestamptz,
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
@@ -143,6 +157,8 @@ CREATE TABLE IF NOT EXISTS public.scan_logs (
 CREATE INDEX IF NOT EXISTS idx_events_org         ON public.events(organization_id);
 CREATE INDEX IF NOT EXISTS idx_events_status      ON public.events(status);
 CREATE INDEX IF NOT EXISTS idx_ticket_types_event ON public.ticket_types(event_id);
+CREATE INDEX IF NOT EXISTS idx_kit_stations_event ON public.kit_delivery_stations(event_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_kit_station ON public.tickets(kit_station_id) WHERE kit_station_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_registrations_org  ON public.registrations(organization_id);
 CREATE INDEX IF NOT EXISTS idx_registrations_event ON public.registrations(event_id);
 CREATE INDEX IF NOT EXISTS idx_registrations_folio ON public.registrations(folio);
@@ -270,15 +286,16 @@ CREATE TRIGGER on_ticket_status_change
 -- ROW LEVEL SECURITY
 -- =============================================================
 
-ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.users         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.events        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ticket_types  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.registrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attendees     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tickets       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payments      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.scan_logs     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.organizations        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.events              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ticket_types        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kit_delivery_stations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.registrations       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendees           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tickets             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scan_logs           ENABLE ROW LEVEL SECURITY;
 
 
 -- =============================================================
@@ -571,6 +588,41 @@ CREATE POLICY "event_staff_update_tickets"
   WITH CHECK (
     public.get_user_role() = 'event_staff' AND
     organization_id = public.get_user_org()
+  );
+
+
+-- =============================================================
+-- POLÍTICAS — kit_delivery_stations
+-- =============================================================
+
+-- super_admin: acceso total
+CREATE POLICY "super_admin_all_kit_stations"
+  ON public.kit_delivery_stations FOR ALL
+  TO authenticated
+  USING (public.get_user_role() = 'super_admin')
+  WITH CHECK (public.get_user_role() = 'super_admin');
+
+-- org_admin: CRUD de su organización
+CREATE POLICY "org_admin_manage_kit_stations"
+  ON public.kit_delivery_stations FOR ALL
+  TO authenticated
+  USING (
+    public.get_user_role() = 'org_admin' AND
+    organization_id = public.get_user_org()
+  )
+  WITH CHECK (
+    public.get_user_role() = 'org_admin' AND
+    organization_id = public.get_user_org()
+  );
+
+-- event_staff: leer mesas activas de su organización (para mostrar al escanear)
+CREATE POLICY "event_staff_read_kit_stations"
+  ON public.kit_delivery_stations FOR SELECT
+  TO authenticated
+  USING (
+    public.get_user_role() = 'event_staff' AND
+    organization_id = public.get_user_org() AND
+    active = true
   );
 
 

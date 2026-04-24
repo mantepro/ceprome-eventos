@@ -132,6 +132,27 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['attendees']['Insert']>
       }
+      kit_delivery_stations: {
+        Row: {
+          id: string
+          event_id: string
+          organization_id: string
+          name: string
+          description: string | null
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          organization_id: string
+          name: string
+          description?: string | null
+          active?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['kit_delivery_stations']['Insert']>
+      }
       tickets: {
         Row: {
           id: string
@@ -144,6 +165,9 @@ export interface Database {
           qr_url: string | null
           status: 'pending' | 'active' | 'used' | 'cancelled'
           checked_in_at: string | null
+          kit_station_id: string | null
+          kit_delivered: boolean
+          kit_delivered_at: string | null
           created_at: string
         }
         Insert: {
@@ -157,6 +181,9 @@ export interface Database {
           qr_url?: string | null
           status?: 'pending' | 'active' | 'used' | 'cancelled'
           checked_in_at?: string | null
+          kit_station_id?: string | null
+          kit_delivered?: boolean
+          kit_delivered_at?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['tickets']['Insert']>
@@ -245,6 +272,7 @@ export interface Database {
 export type Organization = Database['public']['Tables']['organizations']['Row']
 export type Event = Database['public']['Tables']['events']['Row']
 export type TicketType = Database['public']['Tables']['ticket_types']['Row']
+export type KitDeliveryStation = Database['public']['Tables']['kit_delivery_stations']['Row']
 export type Registration = Database['public']['Tables']['registrations']['Row']
 export type Attendee = Database['public']['Tables']['attendees']['Row']
 export type Ticket = Database['public']['Tables']['tickets']['Row']
