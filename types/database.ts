@@ -25,6 +25,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['organizations']['Insert']>
+        Relationships: []
       }
       events: {
         Row: {
@@ -54,6 +55,15 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['events']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'events_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          }
+        ]
       }
       ticket_types: {
         Row: {
@@ -81,6 +91,22 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['ticket_types']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'ticket_types_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'ticket_types_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          }
+        ]
       }
       registrations: {
         Row: {
@@ -106,6 +132,22 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['registrations']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'registrations_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'registrations_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          }
+        ]
       }
       attendees: {
         Row: {
@@ -131,6 +173,15 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['attendees']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'attendees_registration_id_fkey'
+            columns: ['registration_id']
+            isOneToOne: false
+            referencedRelation: 'registrations'
+            referencedColumns: ['id']
+          }
+        ]
       }
       kit_delivery_stations: {
         Row: {
@@ -152,6 +203,15 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['kit_delivery_stations']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'kit_delivery_stations_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          }
+        ]
       }
       tickets: {
         Row: {
@@ -187,6 +247,36 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['tickets']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'tickets_registration_id_fkey'
+            columns: ['registration_id']
+            isOneToOne: false
+            referencedRelation: 'registrations'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'tickets_ticket_type_id_fkey'
+            columns: ['ticket_type_id']
+            isOneToOne: false
+            referencedRelation: 'ticket_types'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'tickets_attendee_id_fkey'
+            columns: ['attendee_id']
+            isOneToOne: false
+            referencedRelation: 'attendees'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'tickets_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          }
+        ]
       }
       payments: {
         Row: {
@@ -216,6 +306,15 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['payments']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'payments_registration_id_fkey'
+            columns: ['registration_id']
+            isOneToOne: false
+            referencedRelation: 'registrations'
+            referencedColumns: ['id']
+          }
+        ]
       }
       scan_logs: {
         Row: {
@@ -237,6 +336,15 @@ export interface Database {
           scanned_at?: string
         }
         Update: Partial<Database['public']['Tables']['scan_logs']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'scan_logs_ticket_id_fkey'
+            columns: ['ticket_id']
+            isOneToOne: false
+            referencedRelation: 'tickets'
+            referencedColumns: ['id']
+          }
+        ]
       }
       users: {
         Row: {
@@ -260,11 +368,21 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['users']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'users_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          }
+        ]
       }
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
-    Enums: Record<string, never>
+    Views: Record<never, never>
+    Functions: Record<never, never>
+    Enums: Record<never, never>
+    CompositeTypes: Record<never, never>
   }
 }
 

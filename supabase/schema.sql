@@ -471,9 +471,11 @@ CREATE POLICY "public_insert_registrations"
   TO anon, authenticated
   WITH CHECK (true);
 
--- Público: leer su propia registration por folio (para página de confirmación)
--- No se puede filtrar por identidad anon, así que la página de confirmación usa service_role
--- Esta política permite leer si conoces el folio exacto (security through obscurity + UUID folio)
+-- Público: leer registration por folio (página de confirmación — folio actúa como token)
+CREATE POLICY "public_read_registration_by_folio"
+  ON public.registrations FOR SELECT
+  TO anon, authenticated
+  USING (true);
 
 -- super_admin: acceso total
 CREATE POLICY "super_admin_all_registrations"
@@ -514,6 +516,12 @@ CREATE POLICY "public_insert_attendees"
   ON public.attendees FOR INSERT
   TO anon, authenticated
   WITH CHECK (true);
+
+-- Público: leer attendees (página de confirmación)
+CREATE POLICY "public_read_attendees"
+  ON public.attendees FOR SELECT
+  TO anon, authenticated
+  USING (true);
 
 -- super_admin: acceso total
 CREATE POLICY "super_admin_all_attendees"
@@ -590,6 +598,18 @@ CREATE POLICY "event_staff_update_tickets"
     organization_id = public.get_user_org()
   );
 
+-- público (anon): insertar ticket al registrarse
+CREATE POLICY "public_insert_tickets"
+  ON public.tickets FOR INSERT
+  TO anon, authenticated
+  WITH CHECK (true);
+
+-- público (anon): leer tickets (página de confirmación)
+CREATE POLICY "public_read_tickets"
+  ON public.tickets FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
 
 -- =============================================================
 -- POLÍTICAS — kit_delivery_stations
@@ -635,6 +655,12 @@ CREATE POLICY "public_insert_payments"
   ON public.payments FOR INSERT
   TO anon, authenticated
   WITH CHECK (true);
+
+-- público (anon): leer payments (página de confirmación)
+CREATE POLICY "public_read_payments"
+  ON public.payments FOR SELECT
+  TO anon, authenticated
+  USING (true);
 
 -- super_admin: acceso total
 CREATE POLICY "super_admin_all_payments"
@@ -703,3 +729,21 @@ VALUES (
   true
 )
 ON CONFLICT (slug) DO NOTHING;
+
+
+-- =============================================================
+-- GRANTS — acceso de roles a tablas y esquema
+-- =============================================================
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
+
+-- Garantiza que tablas futuras también reciban los grants
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
