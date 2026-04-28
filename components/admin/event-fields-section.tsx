@@ -36,7 +36,7 @@ import {
 } from '@/lib/actions/event-fields'
 import type { AdminEventField } from '@/lib/queries/admin'
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country'
 
 const TYPE_LABELS: Record<FieldType, string> = {
   text:     'Texto corto',
@@ -46,6 +46,7 @@ const TYPE_LABELS: Record<FieldType, string> = {
   radio:    'Opción única (radio)',
   checkbox: 'Casilla (sí/no)',
   date:     'Fecha',
+  country:  'País (selector)',
 }
 
 const TYPES_WITH_OPTIONS: FieldType[] = ['select', 'radio']

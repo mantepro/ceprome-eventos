@@ -1,16 +1,21 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import PhoneInput from 'react-phone-number-input'
+import type { E164Number } from 'libphonenumber-js/core'
+import 'react-phone-number-input/style.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { createRegistration } from '@/lib/actions/registration'
+import { COUNTRIES_ES } from '@/lib/data/countries-es'
 import type { Event, TicketType, EventField } from '@/types/database'
 
 type Step = 1 | 2 | 3 | 4
 
-const STEPS = ['Datos', 'Inscripción', 'Pago', 'Resumen']
+const NORMAL_STEPS = ['Datos', 'Inscripción', 'Pago', 'Resumen']
+const PREREG_STEPS = ['Datos', 'Inscripción', 'Confirmación']
 
 interface Props {
   event: Event
@@ -33,18 +38,23 @@ export function RegistrationForm({
   eventFields = [],
   allowPreregistration = false,
 }: Props) {
+  const isPreregFlow = preselectedPayment === 'preregister'
   const [step, setStep] = useState<Step>(1)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone] = useState<E164Number | undefined>(undefined)
   const [extraData, setExtraData] = useState<Record<string, string | boolean>>({})
   const [selectedTypeId, setSelectedTypeId] = useState(preselectedTypeId ?? '')
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>(preselectedPayment ?? '')
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>(
+    preselectedPayment ?? ''
+  )
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
   const selectedType = ticketTypes.find((t) => t.id === selectedTypeId)
+  const displaySteps = isPreregFlow ? PREREG_STEPS : NORMAL_STEPS
+  const displayStep = isPreregFlow && step === 4 ? 3 : step
 
   const paymentOptions = [
     {
@@ -58,11 +68,13 @@ export function RegistrationForm({
       desc: 'Pago seguro con tarjeta o cuenta PayPal',
     },
     ...(allowPreregistration
-      ? [{
-          value: 'preregister' as const,
-          label: 'Registrarme ahora, completar pago después',
-          desc: 'Tu lugar queda reservado — recibirás instrucciones de pago por correo',
-        }]
+      ? [
+          {
+            value: 'preregister' as const,
+            label: 'Registrarme ahora, completar pago después',
+            desc: 'Tu lugar queda reservado — recibirás instrucciones de pago por correo',
+          },
+        ]
       : []),
   ]
 
@@ -90,7 +102,7 @@ export function RegistrationForm({
       setStep(2)
     } else if (step === 2) {
       if (!selectedTypeId) { setError('Selecciona un tipo de inscripción.'); return }
-      setStep(3)
+      setStep(isPreregFlow ? 4 : 3)
     } else if (step === 3) {
       if (!paymentMethod) { setError('Selecciona un método de pago.'); return }
       setStep(4)
@@ -99,11 +111,16 @@ export function RegistrationForm({
 
   function handleBack() {
     setError('')
-    setStep((step - 1) as Step)
+    if (step === 4 && isPreregFlow) {
+      setStep(2)
+    } else {
+      setStep((step - 1) as Step)
+    }
   }
 
   function handleSubmit() {
-    if (!paymentMethod || !selectedTypeId) return
+    if (!selectedTypeId) return
+    if (!isPreregFlow && !paymentMethod) return
     setError('')
     startTransition(async () => {
       const result = await createRegistration({
@@ -114,8 +131,8 @@ export function RegistrationForm({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
-        phone: phone.trim() || undefined,
-        paymentMethod,
+        phone: phone ? String(phone) : undefined,
+        paymentMethod: isPreregFlow ? 'preregister' : (paymentMethod as 'online' | 'manual'),
         extraData: Object.keys(extraData).length > 0 ? extraData : undefined,
       })
       if (result?.error) setError(result.error)
@@ -133,7 +150,7 @@ export function RegistrationForm({
 
   return (
     <div>
-      <StepIndicator current={step} />
+      <StepIndicator current={displayStep as Step} steps={displaySteps} />
 
       {error && (
         <div className="mb-4 rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
@@ -150,7 +167,7 @@ export function RegistrationForm({
                 id="firstName"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="María"
+                placeholder=""
                 autoFocus
               />
             </div>
@@ -160,7 +177,7 @@ export function RegistrationForm({
                 id="lastName"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="García"
+                placeholder=""
               />
             </div>
           </div>
@@ -171,19 +188,18 @@ export function RegistrationForm({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="correo@ejemplo.com"
+              placeholder=""
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="phone">
               Teléfono <span className="text-muted-foreground font-normal">(opcional)</span>
             </Label>
-            <Input
+            <PhoneInput
               id="phone"
-              type="tel"
+              defaultCountry="MX"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+52 55 1234 5678"
+              onChange={setPhone}
             />
           </div>
 
@@ -243,7 +259,7 @@ export function RegistrationForm({
         </div>
       )}
 
-      {step === 3 && (
+      {step === 3 && !isPreregFlow && (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground mb-4">Selecciona cómo realizarás tu pago:</p>
           {paymentOptions.map((opt) => (
@@ -266,10 +282,21 @@ export function RegistrationForm({
 
       {step === 4 && selectedType && (
         <div className="space-y-4">
+          {isPreregFlow && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              <p className="font-medium mb-1">Pre-registro</p>
+              <p className="text-xs">
+                Tu lugar quedará reservado. Recibirás instrucciones de pago por correo electrónico
+                para completar tu inscripción.
+              </p>
+            </div>
+          )}
           <div className="rounded-lg border bg-muted/30 divide-y text-sm">
             <div className="px-4 py-3">
               <p className="text-xs text-muted-foreground mb-1">Asistente</p>
-              <p className="font-medium">{firstName} {lastName}</p>
+              <p className="font-medium">
+                {firstName} {lastName}
+              </p>
               <p className="text-muted-foreground">{email}</p>
               {phone && <p className="text-muted-foreground">{phone}</p>}
               {eventFields.map((field) => {
@@ -285,12 +312,16 @@ export function RegistrationForm({
             <div className="px-4 py-3">
               <p className="text-xs text-muted-foreground mb-1">Inscripción</p>
               <p className="font-medium">{selectedType.name}</p>
-              <p className="font-bold">${selectedType.price.toLocaleString()} {selectedType.currency}</p>
+              <p className="font-bold">
+                ${selectedType.price.toLocaleString()} {selectedType.currency}
+              </p>
             </div>
-            <div className="px-4 py-3">
-              <p className="text-xs text-muted-foreground mb-1">Método de pago</p>
-              <p className="font-medium">{paymentLabel}</p>
-            </div>
+            {!isPreregFlow && (
+              <div className="px-4 py-3">
+                <p className="text-xs text-muted-foreground mb-1">Método de pago</p>
+                <p className="font-medium">{paymentLabel}</p>
+              </div>
+            )}
           </div>
           <p className="text-xs text-muted-foreground text-center">
             Al confirmar aceptas los términos y condiciones del evento.
@@ -308,7 +339,11 @@ export function RegistrationForm({
           <Button onClick={handleNext}>Continuar</Button>
         ) : (
           <Button onClick={handleSubmit} disabled={isPending}>
-            {isPending ? 'Procesando...' : 'Confirmar inscripción'}
+            {isPending
+              ? 'Procesando...'
+              : isPreregFlow
+              ? 'Confirmar pre-registro'
+              : 'Confirmar inscripción'}
           </Button>
         )}
       </div>
@@ -339,7 +374,7 @@ function ExtraField({
           id={field.id}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={helperText ?? field.label}
+          placeholder=""
         />
       )}
 
@@ -348,7 +383,7 @@ function ExtraField({
           id={field.id}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={helperText ?? field.label}
+          placeholder=""
           rows={3}
         />
       )}
@@ -359,7 +394,7 @@ function ExtraField({
           type="number"
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={helperText ?? '0'}
+          placeholder=""
         />
       )}
 
@@ -381,7 +416,25 @@ function ExtraField({
         >
           <option value="">Selecciona una opción…</option>
           {(field.options ?? []).map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {field.field_type === 'country' && (
+        <select
+          id={field.id}
+          value={(value as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="">Selecciona un país…</option>
+          {COUNTRIES_ES.map((country) => (
+            <option key={country} value={country}>
+              {country}
+            </option>
           ))}
         </select>
       )}
@@ -417,17 +470,15 @@ function ExtraField({
         </label>
       )}
 
-      {helperText && field.field_type !== 'text' && field.field_type !== 'textarea' && field.field_type !== 'number' && (
-        <p className="text-xs text-muted-foreground">{helperText}</p>
-      )}
+      {helperText && <p className="text-xs text-muted-foreground">{helperText}</p>}
     </div>
   )
 }
 
-function StepIndicator({ current }: { current: Step }) {
+function StepIndicator({ current, steps }: { current: Step; steps: string[] }) {
   return (
     <div className="flex items-center justify-center gap-6 mb-8">
-      {STEPS.map((label, i) => {
+      {steps.map((label, i) => {
         const n = (i + 1) as Step
         const isActive = current === n
         const isDone = current > n
@@ -444,7 +495,9 @@ function StepIndicator({ current }: { current: Step }) {
             >
               {isDone ? '✓' : n}
             </div>
-            <span className={`text-xs ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+            <span
+              className={`text-xs ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}
+            >
               {label}
             </span>
           </div>

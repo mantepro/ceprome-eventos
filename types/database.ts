@@ -386,7 +386,7 @@ export interface Database {
           event_id: string
           organization_id: string
           label: string
-          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
+          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country'
           options: string[] | null
           helper_text: string | null
           required: boolean
@@ -400,7 +400,7 @@ export interface Database {
           event_id: string
           organization_id: string
           label: string
-          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
+          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country'
           options?: string[] | null
           helper_text?: string | null
           required?: boolean

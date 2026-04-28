@@ -9,7 +9,7 @@ export type EventFieldFormState = { error?: string; errors?: Record<string, stri
 
 const fieldSchema = z.object({
   label: z.string().min(2, 'Mínimo 2 caracteres'),
-  field_type: z.enum(['text', 'textarea', 'number', 'select', 'radio', 'checkbox', 'date'], { message: 'Tipo requerido' }),
+  field_type: z.enum(['text', 'textarea', 'number', 'select', 'radio', 'checkbox', 'date', 'country'], { message: 'Tipo requerido' }),
   options: z.string().optional(),
   helper_text: z.string().optional(),
   required: z.boolean().default(false),

@@ -128,3 +128,69 @@
     @apply font-sans;
   }
 }
+
+/* react-phone-number-input */
+.PhoneInput {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.PhoneInputCountry {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  padding: 0 0.5rem;
+  height: 2.25rem;
+  background: transparent;
+}
+
+.PhoneInputCountrySelect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.PhoneInputCountryIcon {
+  width: 1.25rem;
+  height: auto;
+  display: block;
+}
+
+.PhoneInputCountrySelectArrow {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--muted-foreground);
+  margin-left: 0.125rem;
+}
+
+.PhoneInputInput {
+  flex: 1;
+  min-width: 0;
+  height: 2.25rem;
+  border-radius: calc(var(--radius) * 0.8);
+  border: 1px solid var(--border);
+  background-color: transparent;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  outline: none;
+  color: var(--foreground);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.PhoneInputInput:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 1px var(--ring);
+}

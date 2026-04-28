@@ -802,7 +802,7 @@ GRANT ALL ON TABLE public.event_fields TO anon, authenticated, service_role;
 -- Actualizar tipos de campo personalizados
 ALTER TABLE public.event_fields DROP CONSTRAINT IF EXISTS event_fields_field_type_check;
 ALTER TABLE public.event_fields ADD CONSTRAINT event_fields_field_type_check
-  CHECK (field_type IN ('text','textarea','number','select','radio','checkbox','date'));
+  CHECK (field_type IN ('text','textarea','number','select','radio','checkbox','date','country'));
 
 -- Alcance del campo: formulario público vs uso interno admin
 ALTER TABLE public.event_fields

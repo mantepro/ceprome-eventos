@@ -162,7 +162,7 @@ export const getAdminEventFields = cache(async (eventId: string, orgId: string) 
     id: string
     event_id: string
     label: string
-    field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
+    field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country'
     options: string[] | null
     helper_text: string | null
     required: boolean
