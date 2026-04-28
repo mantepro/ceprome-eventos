@@ -13,7 +13,8 @@ const schema = z.object({
   lastName: z.string().min(2, 'Mínimo 2 caracteres'),
   email: z.string().email('Email inválido'),
   phone: z.string().optional(),
-  paymentMethod: z.enum(['online', 'manual']),
+  paymentMethod: z.enum(['online', 'manual', 'preregister']),
+  extraData: z.record(z.string(), z.union([z.string(), z.boolean()])).optional(),
 })
 
 export type CreateRegistrationInput = z.infer<typeof schema>
@@ -32,7 +33,7 @@ export async function createRegistration(
 
   const {
     orgSlug, orgId, eventId, ticketTypeId,
-    firstName, lastName, email, phone, paymentMethod,
+    firstName, lastName, email, phone, paymentMethod, extraData,
   } = parsed.data
 
   const supabase = await createClient()
@@ -55,6 +56,7 @@ export async function createRegistration(
     return { error: 'Este tipo de inscripción ya no tiene lugares disponibles.' }
   }
 
+  const isPreregister = paymentMethod === 'preregister'
   const folio = generateFolio()
   const registrationId = crypto.randomUUID()
   const attendeeId = crypto.randomUUID()
@@ -66,8 +68,8 @@ export async function createRegistration(
       organization_id: orgId,
       event_id: eventId,
       folio,
-      status: 'pending',
-      payment_method: paymentMethod,
+      status: isPreregister ? 'draft' : 'pending',
+      payment_method: isPreregister ? null : paymentMethod,
       total_amount: ticketType.price,
     })
 
@@ -86,6 +88,7 @@ export async function createRegistration(
       last_name: lastName,
       email,
       phone: phone ?? null,
+      extra_data: extraData && Object.keys(extraData).length > 0 ? extraData : null,
     })
 
   if (attError) {
@@ -108,18 +111,21 @@ export async function createRegistration(
     return { error: 'Error al generar el ticket.' }
   }
 
-  const { error: paymentError } = await supabase.from('payments').insert({
-    registration_id: registrationId,
-    organization_id: orgId,
-    amount: ticketType.price,
-    currency: ticketType.currency,
-    method: paymentMethod === 'online' ? 'paypal' : 'manual',
-    status: 'pending',
-  })
+  // No payment record for pre-registrations — they haven't committed to a method yet
+  if (!isPreregister) {
+    const { error: paymentError } = await supabase.from('payments').insert({
+      registration_id: registrationId,
+      organization_id: orgId,
+      amount: ticketType.price,
+      currency: ticketType.currency,
+      method: paymentMethod === 'online' ? 'paypal' : 'manual',
+      status: 'pending',
+    })
 
-  if (paymentError) {
-    console.error('[createRegistration] payments INSERT failed:', JSON.stringify(paymentError, null, 2))
-    return { error: 'Error al registrar el pago.' }
+    if (paymentError) {
+      console.error('[createRegistration] payments INSERT failed:', JSON.stringify(paymentError, null, 2))
+      return { error: 'Error al registrar el pago.' }
+    }
   }
 
   redirect(`/${orgSlug}/confirmar/${folio}`)

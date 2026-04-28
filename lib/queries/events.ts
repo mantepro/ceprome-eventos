@@ -1,9 +1,8 @@
 import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import type { Organization, Event, TicketType } from '@/types/database'
+import type { Organization, Event, TicketType, EventField } from '@/types/database'
 
-// React.cache deduplica la query dentro del mismo render (layout + page comparten el resultado)
 export const getOrgBySlug = cache(async (slug: string): Promise<Organization> => {
   const supabase = await createClient()
   const { data } = await supabase
@@ -53,4 +52,16 @@ export async function getActiveTicketTypes(eventId: string): Promise<TicketType[
     .order('price', { ascending: true })
 
   return data ?? []
+}
+
+export async function getEventFields(eventId: string): Promise<EventField[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('event_fields')
+    .select('*')
+    .eq('event_id', eventId)
+    .eq('active', true)
+    .order('sort_order', { ascending: true })
+
+  return (data ?? []) as EventField[]
 }

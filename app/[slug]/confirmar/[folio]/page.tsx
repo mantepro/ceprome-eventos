@@ -25,6 +25,7 @@ export default async function ConfirmationPage({
   const attendee = reg.attendees[0]
   const ticket = reg.tickets[0]
   const isPaid = reg.status === 'paid'
+  const isDraft = reg.status === 'draft'
   const isOnline = reg.payment_method === 'online'
   const isManual = reg.payment_method === 'manual'
 
@@ -35,19 +36,23 @@ export default async function ConfirmationPage({
           className={`inline-flex h-16 w-16 items-center justify-center rounded-full text-3xl mb-4 ${
             isPaid
               ? 'bg-green-100 text-green-600'
+              : isDraft
+              ? 'bg-blue-100 text-blue-600'
               : pago === 'fallido' || pago === 'cancelado'
               ? 'bg-red-100 text-red-600'
               : 'bg-amber-100 text-amber-600'
           }`}
         >
-          {isPaid ? '✓' : pago === 'fallido' || pago === 'cancelado' ? '!' : '⏳'}
+          {isPaid ? '✓' : isDraft ? '📋' : pago === 'fallido' || pago === 'cancelado' ? '!' : '⏳'}
         </div>
         <h1 className="text-2xl font-bold">
-          {isPaid ? '¡Pago confirmado!' : '¡Inscripción recibida!'}
+          {isPaid ? '¡Pago confirmado!' : isDraft ? '¡Pre-registro recibido!' : '¡Inscripción recibida!'}
         </h1>
         <p className="text-muted-foreground mt-1">
           {isPaid
             ? 'Tu ticket QR será enviado por correo en breve.'
+            : isDraft
+            ? 'Tu lugar está reservado. Completa tu pago para confirmarlo.'
             : 'Completa tu pago para confirmar el lugar.'}
         </p>
       </div>
@@ -111,7 +116,21 @@ export default async function ConfirmationPage({
         </div>
       </div>
 
-      {isPaid ? (
+      {isDraft ? (
+        <div className="rounded-lg border bg-blue-50 border-blue-200 px-4 py-4 space-y-2">
+          <p className="font-semibold text-blue-900">Instrucciones para completar tu pago</p>
+          <p className="text-sm text-blue-800">
+            Para confirmar tu lugar, realiza tu pago y envía el comprobante indicando tu folio{' '}
+            <strong>{reg.folio}</strong>.
+          </p>
+          {reg.organizations?.email && (
+            <p className="text-sm font-medium text-blue-900">{reg.organizations.email}</p>
+          )}
+          <p className="text-xs text-blue-700 mt-1">
+            Guarda este folio — lo necesitarás para cualquier consulta.
+          </p>
+        </div>
+      ) : isPaid ? (
         <div className="rounded-lg border bg-green-50 border-green-200 px-4 py-4 text-center space-y-1">
           <p className="font-semibold text-green-900">Pago confirmado</p>
           <p className="text-sm text-green-800">
@@ -144,7 +163,7 @@ export default async function ConfirmationPage({
         </div>
       ) : null}
 
-      {!isPaid && (
+      {!isPaid && !isDraft && (
         <p className="text-xs text-center text-muted-foreground mt-6">
           Tu ticket con código QR será enviado a{' '}
           <strong>{attendee?.email}</strong> una vez confirmado el pago.

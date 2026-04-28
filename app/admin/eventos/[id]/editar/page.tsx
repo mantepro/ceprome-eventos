@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
-import { getCurrentUserProfile, getEventById, getEventTicketTypes } from '@/lib/queries/admin'
+import { getCurrentUserProfile, getEventById, getEventTicketTypes, getAdminEventFields } from '@/lib/queries/admin'
 import { updateEvent } from '@/lib/actions/events'
 import { EventForm } from '@/components/admin/event-form'
 import { TicketTypeSection } from '@/components/admin/ticket-type-section'
+import { EventFieldsSection } from '@/components/admin/event-fields-section'
 
 type Params = Promise<{ id: string }>
 
@@ -19,9 +20,10 @@ export default async function EditarEventoPage({ params }: { params: Params }) {
   const profile = await getCurrentUserProfile()
   if (!profile) return null
 
-  const [event, ticketTypes] = await Promise.all([
+  const [event, ticketTypes, eventFields] = await Promise.all([
     getEventById(id, profile.organization_id),
     getEventTicketTypes(id, profile.organization_id),
+    getAdminEventFields(id, profile.organization_id),
   ])
 
   if (!event) notFound()
@@ -61,6 +63,14 @@ export default async function EditarEventoPage({ params }: { params: Params }) {
       <div className="rounded-lg border p-6">
         <h2 className="text-sm font-semibold mb-4">Tipos de acceso</h2>
         <TicketTypeSection eventId={id} ticketTypes={ticketTypes} />
+      </div>
+
+      <div className="rounded-lg border p-6">
+        <h2 className="text-sm font-semibold mb-1">Campos personalizados</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Aparecen en el formulario de inscripción pública. Los valores se guardan por asistente.
+        </p>
+        <EventFieldsSection eventId={id} fields={eventFields} />
       </div>
     </div>
   )

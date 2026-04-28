@@ -747,3 +747,53 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+
+
+-- =============================================================
+-- PRE-REGISTRO + CAMPOS PERSONALIZADOS (feature)
+-- =============================================================
+
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS
+  allow_preregistration boolean NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS public.event_fields (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id        uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  organization_id uuid NOT NULL REFERENCES public.organizations(id),
+  label           text NOT NULL,
+  field_type      text NOT NULL CHECK (field_type IN ('text','select','checkbox')),
+  options         jsonb,          -- string[] solo para tipo select
+  required        boolean NOT NULL DEFAULT false,
+  sort_order      integer NOT NULL DEFAULT 0,
+  active          boolean NOT NULL DEFAULT true,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_event_fields_event ON public.event_fields(event_id);
+
+ALTER TABLE public.event_fields ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "public_read_event_fields"
+  ON public.event_fields FOR SELECT
+  TO anon, authenticated
+  USING (active = true);
+
+CREATE POLICY "super_admin_all_event_fields"
+  ON public.event_fields FOR ALL
+  TO authenticated
+  USING (public.get_user_role() = 'super_admin')
+  WITH CHECK (public.get_user_role() = 'super_admin');
+
+CREATE POLICY "org_admin_manage_event_fields"
+  ON public.event_fields FOR ALL
+  TO authenticated
+  USING (
+    public.get_user_role() = 'org_admin' AND
+    organization_id = public.get_user_org()
+  )
+  WITH CHECK (
+    public.get_user_role() = 'org_admin' AND
+    organization_id = public.get_user_org()
+  );
+
+GRANT ALL ON TABLE public.event_fields TO anon, authenticated, service_role;

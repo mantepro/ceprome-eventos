@@ -5,24 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createRegistration } from '@/lib/actions/registration'
-import type { Event, TicketType } from '@/types/database'
+import type { Event, TicketType, EventField } from '@/types/database'
 
 type Step = 1 | 2 | 3 | 4
 
 const STEPS = ['Datos', 'Inscripción', 'Pago', 'Resumen']
-
-const PAYMENT_OPTIONS = [
-  {
-    value: 'manual' as const,
-    label: 'Transferencia / Depósito bancario',
-    desc: 'Te enviaremos los datos bancarios por correo',
-  },
-  {
-    value: 'online' as const,
-    label: 'PayPal',
-    desc: 'Pago seguro con tarjeta o cuenta PayPal',
-  },
-]
 
 interface Props {
   event: Event
@@ -30,25 +17,65 @@ interface Props {
   orgSlug: string
   orgId: string
   preselectedTypeId?: string
+  eventFields?: EventField[]
+  allowPreregistration?: boolean
 }
 
-export function RegistrationForm({ event, ticketTypes, orgSlug, orgId, preselectedTypeId }: Props) {
+export function RegistrationForm({
+  event,
+  ticketTypes,
+  orgSlug,
+  orgId,
+  preselectedTypeId,
+  eventFields = [],
+  allowPreregistration = false,
+}: Props) {
   const [step, setStep] = useState<Step>(1)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [extraData, setExtraData] = useState<Record<string, string | boolean>>({})
   const [selectedTypeId, setSelectedTypeId] = useState(preselectedTypeId ?? '')
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | ''>('')
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>('')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
   const selectedType = ticketTypes.find((t) => t.id === selectedTypeId)
 
+  const paymentOptions = [
+    {
+      value: 'manual' as const,
+      label: 'Transferencia / Depósito bancario',
+      desc: 'Te enviaremos los datos bancarios por correo',
+    },
+    {
+      value: 'online' as const,
+      label: 'PayPal',
+      desc: 'Pago seguro con tarjeta o cuenta PayPal',
+    },
+    ...(allowPreregistration
+      ? [{
+          value: 'preregister' as const,
+          label: 'Registrarme ahora, completar pago después',
+          desc: 'Tu lugar queda reservado — recibirás instrucciones de pago por correo',
+        }]
+      : []),
+  ]
+
   function validateStep1(): string | null {
     if (!firstName.trim() || firstName.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres.'
     if (!lastName.trim() || lastName.trim().length < 2) return 'El apellido debe tener al menos 2 caracteres.'
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Email inválido.'
+    for (const field of eventFields) {
+      if (!field.required) continue
+      const val = extraData[field.id]
+      if (field.field_type === 'checkbox') {
+        if (!val) return `El campo "${field.label}" es obligatorio.`
+      } else {
+        if (!val || String(val).trim() === '') return `El campo "${field.label}" es obligatorio.`
+      }
+    }
     return null
   }
 
@@ -86,10 +113,20 @@ export function RegistrationForm({ event, ticketTypes, orgSlug, orgId, preselect
         email: email.trim(),
         phone: phone.trim() || undefined,
         paymentMethod,
+        extraData: Object.keys(extraData).length > 0 ? extraData : undefined,
       })
       if (result?.error) setError(result.error)
     })
   }
+
+  const paymentLabel =
+    paymentMethod === 'online'
+      ? 'PayPal'
+      : paymentMethod === 'manual'
+      ? 'Transferencia / Depósito bancario'
+      : paymentMethod === 'preregister'
+      ? 'Completar pago después'
+      : ''
 
   return (
     <div>
@@ -146,6 +183,19 @@ export function RegistrationForm({ event, ticketTypes, orgSlug, orgId, preselect
               placeholder="+52 55 1234 5678"
             />
           </div>
+
+          {eventFields.length > 0 && (
+            <div className="space-y-4 pt-2 border-t">
+              {eventFields.map((field) => (
+                <ExtraField
+                  key={field.id}
+                  field={field}
+                  value={extraData[field.id]}
+                  onChange={(val) => setExtraData((prev) => ({ ...prev, [field.id]: val }))}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -177,9 +227,7 @@ export function RegistrationForm({ event, ticketTypes, orgSlug, orgId, preselect
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{tt.name}</p>
-                    {isSoldOut && (
-                      <p className="text-xs text-muted-foreground mt-0.5">Agotado</p>
-                    )}
+                    {isSoldOut && <p className="text-xs text-muted-foreground mt-0.5">Agotado</p>}
                   </div>
                   <p className="font-bold text-right">
                     ${tt.price.toLocaleString()}{' '}
@@ -195,7 +243,7 @@ export function RegistrationForm({ event, ticketTypes, orgSlug, orgId, preselect
       {step === 3 && (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground mb-4">Selecciona cómo realizarás tu pago:</p>
-          {PAYMENT_OPTIONS.map((opt) => (
+          {paymentOptions.map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -221,6 +269,15 @@ export function RegistrationForm({ event, ticketTypes, orgSlug, orgId, preselect
               <p className="font-medium">{firstName} {lastName}</p>
               <p className="text-muted-foreground">{email}</p>
               {phone && <p className="text-muted-foreground">{phone}</p>}
+              {eventFields.map((field) => {
+                const val = extraData[field.id]
+                if (val === undefined || val === '' || val === false) return null
+                return (
+                  <p key={field.id} className="text-muted-foreground">
+                    {field.label}: {field.field_type === 'checkbox' ? 'Sí' : String(val)}
+                  </p>
+                )
+              })}
             </div>
             <div className="px-4 py-3">
               <p className="text-xs text-muted-foreground mb-1">Inscripción</p>
@@ -229,9 +286,7 @@ export function RegistrationForm({ event, ticketTypes, orgSlug, orgId, preselect
             </div>
             <div className="px-4 py-3">
               <p className="text-xs text-muted-foreground mb-1">Método de pago</p>
-              <p className="font-medium">
-                {paymentMethod === 'online' ? 'PayPal' : 'Transferencia / Depósito bancario'}
-              </p>
+              <p className="font-medium">{paymentLabel}</p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground text-center">
@@ -258,6 +313,61 @@ export function RegistrationForm({ event, ticketTypes, orgSlug, orgId, preselect
   )
 }
 
+function ExtraField({
+  field,
+  value,
+  onChange,
+}: {
+  field: EventField
+  value: string | boolean | undefined
+  onChange: (val: string | boolean) => void
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={field.id}>
+        {field.label}
+        {field.required && <span className="text-destructive ml-1">*</span>}
+      </Label>
+
+      {field.field_type === 'text' && (
+        <Input
+          id={field.id}
+          value={(value as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={field.label}
+        />
+      )}
+
+      {field.field_type === 'select' && (
+        <select
+          id={field.id}
+          value={(value as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="">Selecciona una opción…</option>
+          {(field.options ?? []).map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      )}
+
+      {field.field_type === 'checkbox' && (
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            id={field.id}
+            type="checkbox"
+            checked={(value as boolean) ?? false}
+            onChange={(e) => onChange(e.target.checked)}
+            className="h-4 w-4 rounded"
+          />
+          {field.label}
+        </label>
+      )}
+    </div>
+  )
+}
+
 function StepIndicator({ current }: { current: Step }) {
   return (
     <div className="flex items-center justify-center gap-6 mb-8">
@@ -278,11 +388,7 @@ function StepIndicator({ current }: { current: Step }) {
             >
               {isDone ? '✓' : n}
             </div>
-            <span
-              className={`text-xs ${
-                isActive ? 'text-primary font-medium' : 'text-muted-foreground'
-              }`}
-            >
+            <span className={`text-xs ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
               {label}
             </span>
           </div>

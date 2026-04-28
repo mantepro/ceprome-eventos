@@ -25,6 +25,7 @@ const eventSchema = z.object({
   status: z.enum(['draft', 'published', 'closed', 'cancelled'], {
     message: 'Estado requerido',
   }),
+  allow_preregistration: z.boolean().default(false),
 })
 
 function parseFormData(formData: FormData) {
@@ -36,6 +37,7 @@ function parseFormData(formData: FormData) {
     ends_at: (formData.get('ends_at') as string) || undefined,
     modality: formData.get('modality') as string,
     status: formData.get('status') as string,
+    allow_preregistration: formData.get('allow_preregistration') === 'on',
   }
 }
 
@@ -87,7 +89,7 @@ export async function createEvent(
     }
   }
 
-  const { name, description, location, starts_at, ends_at, modality, status } = parsed.data
+  const { name, description, location, starts_at, ends_at, modality, status, allow_preregistration } = parsed.data
   const supabase = await createClient()
   const eventId = crypto.randomUUID()
 
@@ -103,6 +105,7 @@ export async function createEvent(
       ends_at: ends_at ? new Date(ends_at).toISOString() : null,
       modality,
       status,
+      allow_preregistration,
     })
 
   if (error) return { error: 'Error al crear el evento.' }
@@ -128,7 +131,7 @@ export async function updateEvent(
     }
   }
 
-  const { name, description, location, starts_at, ends_at, modality, status } = parsed.data
+  const { name, description, location, starts_at, ends_at, modality, status, allow_preregistration } = parsed.data
 
   // Handle cover image upload
   const coverFile = formData.get('cover')
@@ -149,6 +152,7 @@ export async function updateEvent(
       ends_at: ends_at ? new Date(ends_at).toISOString() : null,
       modality,
       status,
+      allow_preregistration,
       ...(coverUrl !== undefined && { cover_url: coverUrl }),
     })
     .eq('id', eventId)

@@ -39,6 +39,7 @@ export interface Database {
           modality: 'presencial' | 'virtual' | 'hibrido'
           status: 'draft' | 'published' | 'closed' | 'cancelled'
           cover_url: string | null
+          allow_preregistration: boolean
           created_at: string
         }
         Insert: {
@@ -52,6 +53,7 @@ export interface Database {
           modality: 'presencial' | 'virtual' | 'hibrido'
           status?: 'draft' | 'published' | 'closed' | 'cancelled'
           cover_url?: string | null
+          allow_preregistration?: boolean
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['events']['Insert']>
@@ -378,6 +380,49 @@ export interface Database {
           }
         ]
       }
+      event_fields: {
+        Row: {
+          id: string
+          event_id: string
+          organization_id: string
+          label: string
+          field_type: 'text' | 'select' | 'checkbox'
+          options: string[] | null
+          required: boolean
+          sort_order: number
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          organization_id: string
+          label: string
+          field_type: 'text' | 'select' | 'checkbox'
+          options?: string[] | null
+          required?: boolean
+          sort_order?: number
+          active?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['event_fields']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'event_fields_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'event_fields_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          }
+        ]
+      }
     }
     Views: Record<never, never>
     Functions: Record<never, never>
@@ -397,3 +442,4 @@ export type Ticket = Database['public']['Tables']['tickets']['Row']
 export type Payment = Database['public']['Tables']['payments']['Row']
 export type ScanLog = Database['public']['Tables']['scan_logs']['Row']
 export type User = Database['public']['Tables']['users']['Row']
+export type EventField = Database['public']['Tables']['event_fields']['Row']

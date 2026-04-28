@@ -128,7 +128,7 @@ export const getEventById = cache(async (id: string, orgId: string) => {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('events')
-    .select('id, name, description, location, starts_at, ends_at, modality, status, cover_url')
+    .select('id, name, description, location, starts_at, ends_at, modality, status, cover_url, allow_preregistration')
     .eq('id', id)
     .eq('organization_id', orgId)
     .single()
@@ -149,3 +149,25 @@ export const getEventTicketTypes = cache(async (eventId: string, orgId: string) 
 })
 
 export type TicketTypeRow = Awaited<ReturnType<typeof getEventTicketTypes>>[number]
+
+export const getAdminEventFields = cache(async (eventId: string, orgId: string) => {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('event_fields')
+    .select('id, label, field_type, options, required, sort_order, active, created_at')
+    .eq('event_id', eventId)
+    .eq('organization_id', orgId)
+    .order('sort_order', { ascending: true })
+  return (data ?? []) as {
+    id: string
+    label: string
+    field_type: 'text' | 'select' | 'checkbox'
+    options: string[] | null
+    required: boolean
+    sort_order: number
+    active: boolean
+    created_at: string
+  }[]
+})
+
+export type AdminEventField = Awaited<ReturnType<typeof getAdminEventFields>>[number]

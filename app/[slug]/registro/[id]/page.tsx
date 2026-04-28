@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getOrgBySlug, getPublishedEvent, getActiveTicketTypes } from '@/lib/queries/events'
+import { getOrgBySlug, getPublishedEvent, getActiveTicketTypes, getEventFields } from '@/lib/queries/events'
 import { RegistrationForm } from '@/components/public/registration-form'
 
 type Params = Promise<{ slug: string; id: string }>
@@ -22,9 +22,10 @@ export default async function RegistrationPage({
   const { slug, id } = await params
   const { tipo } = await searchParams
   const org = await getOrgBySlug(slug)
-  const [event, ticketTypes] = await Promise.all([
+  const [event, ticketTypes, eventFields] = await Promise.all([
     getPublishedEvent(org.id, id),
     getActiveTicketTypes(id),
+    getEventFields(id),
   ])
 
   return (
@@ -39,6 +40,8 @@ export default async function RegistrationPage({
         orgSlug={slug}
         orgId={org.id}
         preselectedTypeId={tipo}
+        eventFields={eventFields}
+        allowPreregistration={event.allow_preregistration}
       />
     </div>
   )

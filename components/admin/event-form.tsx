@@ -109,6 +109,24 @@ export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Pr
 
       <CoverField currentUrl={defaultValues?.cover_url ?? null} />
 
+      <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
+        <input
+          type="checkbox"
+          id="allow_preregistration"
+          name="allow_preregistration"
+          defaultChecked={defaultValues?.allow_preregistration ?? false}
+          className="h-4 w-4 rounded"
+        />
+        <div>
+          <label htmlFor="allow_preregistration" className="text-sm font-medium cursor-pointer">
+            Permitir pre-registro
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Los participantes pueden inscribirse sin pagar y completar el pago después
+          </p>
+        </div>
+      </div>
+
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={pending}>
           {pending ? 'Guardando…' : submitLabel}
