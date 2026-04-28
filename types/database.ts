@@ -386,7 +386,7 @@ export interface Database {
           event_id: string
           organization_id: string
           label: string
-          field_type: 'text' | 'select' | 'checkbox'
+          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
           options: string[] | null
           required: boolean
           sort_order: number
@@ -398,7 +398,7 @@ export interface Database {
           event_id: string
           organization_id: string
           label: string
-          field_type: 'text' | 'select' | 'checkbox'
+          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
           options?: string[] | null
           required?: boolean
           sort_order?: number

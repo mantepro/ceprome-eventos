@@ -797,3 +797,9 @@ CREATE POLICY "org_admin_manage_event_fields"
   );
 
 GRANT ALL ON TABLE public.event_fields TO anon, authenticated, service_role;
+
+
+-- Actualizar tipos de campo personalizados
+ALTER TABLE public.event_fields DROP CONSTRAINT IF EXISTS event_fields_field_type_check;
+ALTER TABLE public.event_fields ADD CONSTRAINT event_fields_field_type_check
+  CHECK (field_type IN ('text','textarea','number','select','radio','checkbox','date'));

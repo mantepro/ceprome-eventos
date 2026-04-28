@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { createRegistration } from '@/lib/actions/registration'
 import type { Event, TicketType, EventField } from '@/types/database'
 
@@ -338,6 +339,35 @@ function ExtraField({
         />
       )}
 
+      {field.field_type === 'textarea' && (
+        <Textarea
+          id={field.id}
+          value={(value as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={field.label}
+          rows={3}
+        />
+      )}
+
+      {field.field_type === 'number' && (
+        <Input
+          id={field.id}
+          type="number"
+          value={(value as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="0"
+        />
+      )}
+
+      {field.field_type === 'date' && (
+        <Input
+          id={field.id}
+          type="date"
+          value={(value as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+
       {field.field_type === 'select' && (
         <select
           id={field.id}
@@ -350,6 +380,24 @@ function ExtraField({
             <option key={opt} value={opt}>{opt}</option>
           ))}
         </select>
+      )}
+
+      {field.field_type === 'radio' && (
+        <div className="space-y-2">
+          {(field.options ?? []).map((opt) => (
+            <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name={field.id}
+                value={opt}
+                checked={(value as string) === opt}
+                onChange={() => onChange(opt)}
+                className="h-4 w-4"
+              />
+              {opt}
+            </label>
+          ))}
+        </div>
       )}
 
       {field.field_type === 'checkbox' && (

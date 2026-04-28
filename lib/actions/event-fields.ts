@@ -9,14 +9,14 @@ export type EventFieldFormState = { error?: string; errors?: Record<string, stri
 
 const fieldSchema = z.object({
   label: z.string().min(2, 'Mínimo 2 caracteres'),
-  field_type: z.enum(['text', 'select', 'checkbox'], { message: 'Tipo requerido' }),
+  field_type: z.enum(['text', 'textarea', 'number', 'select', 'radio', 'checkbox', 'date'], { message: 'Tipo requerido' }),
   options: z.string().optional(),
   required: z.boolean().default(false),
   sort_order: z.coerce.number().int().min(0).default(0),
 })
 
 function parseOptions(type: string, raw: string | undefined): string[] | null {
-  if (type !== 'select' || !raw?.trim()) return null
+  if (!['select', 'radio'].includes(type) || !raw?.trim()) return null
   return raw.split(',').map((o) => o.trim()).filter(Boolean)
 }
 
@@ -103,6 +103,27 @@ export async function updateEventField(
 
   revalidatePath(`/admin/eventos/${eventId}/editar`)
   return {}
+}
+
+export async function reorderEventFields(
+  eventId: string,
+  orderedIds: string[]
+): Promise<void> {
+  const profile = await getCurrentUserProfile()
+  if (!profile) return
+
+  const supabase = await createClient()
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase
+        .from('event_fields')
+        .update({ sort_order: index * 10 })
+        .eq('id', id)
+        .eq('organization_id', profile.organization_id)
+    )
+  )
+
+  revalidatePath(`/admin/eventos/${eventId}/editar`)
 }
 
 export async function deleteEventField(
