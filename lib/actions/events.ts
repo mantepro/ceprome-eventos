@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserProfile } from '@/lib/queries/admin'
 
 export type EventFormState = {
@@ -38,6 +39,29 @@ function parseFormData(formData: FormData) {
   }
 }
 
+async function uploadCover(
+  file: File,
+  orgId: string,
+  eventId: string
+): Promise<string | null> {
+  const ext = file.name.split('.').pop() ?? 'jpg'
+  const path = `${orgId}/${eventId}/cover.${ext}`
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const admin = createAdminClient()
+
+  const { error } = await admin.storage
+    .from('covers')
+    .upload(path, buffer, { contentType: file.type, upsert: true })
+
+  if (error) {
+    console.error('[uploadCover]', error)
+    return null
+  }
+
+  const { data } = admin.storage.from('covers').getPublicUrl(path)
+  return data.publicUrl
+}
+
 export async function createEvent(
   _prev: EventFormState,
   formData: FormData
@@ -56,8 +80,8 @@ export async function createEvent(
 
   const { name, description, location, starts_at, ends_at, modality, status } = parsed.data
   const supabase = await createClient()
-
   const eventId = crypto.randomUUID()
+
   const { error } = await supabase
     .from('events')
     .insert({
@@ -96,8 +120,16 @@ export async function updateEvent(
   }
 
   const { name, description, location, starts_at, ends_at, modality, status } = parsed.data
-  const supabase = await createClient()
 
+  // Handle cover image upload
+  const coverFile = formData.get('cover')
+  let coverUrl: string | undefined
+  if (coverFile instanceof File && coverFile.size > 0) {
+    const url = await uploadCover(coverFile, profile.organization_id, eventId)
+    if (url) coverUrl = url
+  }
+
+  const supabase = await createClient()
   const { error } = await supabase
     .from('events')
     .update({
@@ -108,6 +140,7 @@ export async function updateEvent(
       ends_at: ends_at ? new Date(ends_at).toISOString() : null,
       modality,
       status,
+      ...(coverUrl !== undefined && { cover_url: coverUrl }),
     })
     .eq('id', eventId)
     .eq('organization_id', profile.organization_id)
@@ -130,6 +163,15 @@ const ticketTypeSchema = z.object({
 
 export type TicketTypeFormState = { error?: string; errors?: Record<string, string> }
 
+function parseTicketTypeFormData(formData: FormData) {
+  return {
+    name: formData.get('name') as string,
+    price: formData.get('price') as string,
+    currency: (formData.get('currency') as string) || 'USD',
+    capacity: (formData.get('capacity') as string) || '',
+  }
+}
+
 export async function createTicketType(
   eventId: string,
   _prev: TicketTypeFormState,
@@ -138,14 +180,7 @@ export async function createTicketType(
   const profile = await getCurrentUserProfile()
   if (!profile) return { error: 'No autorizado.' }
 
-  const raw = {
-    name: formData.get('name') as string,
-    price: formData.get('price') as string,
-    currency: (formData.get('currency') as string) || 'USD',
-    capacity: (formData.get('capacity') as string) || '',
-  }
-
-  const parsed = ticketTypeSchema.safeParse(raw)
+  const parsed = ticketTypeSchema.safeParse(parseTicketTypeFormData(formData))
   if (!parsed.success) {
     return {
       errors: Object.fromEntries(
@@ -167,6 +202,39 @@ export async function createTicketType(
   })
 
   if (error) return { error: 'Error al crear el tipo de acceso.' }
+
+  revalidatePath(`/admin/eventos/${eventId}/editar`)
+  return {}
+}
+
+export async function updateTicketType(
+  ticketTypeId: string,
+  eventId: string,
+  _prev: TicketTypeFormState,
+  formData: FormData
+): Promise<TicketTypeFormState> {
+  const profile = await getCurrentUserProfile()
+  if (!profile) return { error: 'No autorizado.' }
+
+  const parsed = ticketTypeSchema.safeParse(parseTicketTypeFormData(formData))
+  if (!parsed.success) {
+    return {
+      errors: Object.fromEntries(
+        Object.entries(parsed.error.flatten().fieldErrors).map(([k, v]) => [k, v?.[0] ?? ''])
+      ),
+    }
+  }
+
+  const { name, price, currency, capacity } = parsed.data
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('ticket_types')
+    .update({ name, price, currency, capacity: capacity ?? null })
+    .eq('id', ticketTypeId)
+    .eq('organization_id', profile.organization_id)
+
+  if (error) return { error: 'Error al actualizar el tipo de acceso.' }
 
   revalidatePath(`/admin/eventos/${eventId}/editar`)
   return {}

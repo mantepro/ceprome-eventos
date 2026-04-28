@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -105,6 +106,29 @@ export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Pr
           />
         </Field>
       </div>
+
+      <Field label="Imagen de portada">
+        {defaultValues?.cover_url && (
+          <div className="mb-2">
+            <Image
+              src={defaultValues.cover_url}
+              alt="Portada actual"
+              width={480}
+              height={270}
+              className="rounded-lg object-cover border w-full max-w-sm aspect-video"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Imagen actual — sube una nueva para reemplazar
+            </p>
+          </div>
+        )}
+        <Input
+          name="cover"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="cursor-pointer"
+        />
+      </Field>
 
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={pending}>
