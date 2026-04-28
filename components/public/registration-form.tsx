@@ -82,6 +82,10 @@ export function RegistrationForm({
     if (!firstName.trim() || firstName.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres.'
     if (!lastName.trim() || lastName.trim().length < 2) return 'El apellido debe tener al menos 2 caracteres.'
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Email inválido.'
+    if (!phone) return 'El teléfono es obligatorio.'
+    const phoneDigits = String(phone).replace(/\D/g, '')
+    if (phoneDigits.length < 8) return 'El teléfono debe tener al menos 8 dígitos.'
+    if (phoneDigits.length > 15) return 'El teléfono debe tener como máximo 15 dígitos.'
     for (const field of eventFields) {
       if (!field.required) continue
       const val = extraData[field.id]
@@ -131,7 +135,7 @@ export function RegistrationForm({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
-        phone: phone ? String(phone) : undefined,
+        phone: String(phone ?? ''),
         paymentMethod: isPreregFlow ? 'preregister' : (paymentMethod as 'online' | 'manual'),
         extraData: Object.keys(extraData).length > 0 ? extraData : undefined,
       })
@@ -192,9 +196,7 @@ export function RegistrationForm({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="phone">
-              Teléfono <span className="text-muted-foreground font-normal">(opcional)</span>
-            </Label>
+            <Label htmlFor="phone">Teléfono</Label>
             <PhoneInput
               id="phone"
               defaultCountry="MX"
@@ -477,15 +479,15 @@ function ExtraField({
 
 function StepIndicator({ current, steps }: { current: Step; steps: string[] }) {
   return (
-    <div className="flex items-center justify-center gap-6 mb-8">
+    <div className="flex items-center justify-center gap-8 mb-8">
       {steps.map((label, i) => {
         const n = (i + 1) as Step
         const isActive = current === n
         const isDone = current > n
         return (
-          <div key={label} className="flex flex-col items-center gap-1">
+          <div key={label} className="flex flex-col items-center gap-1.5 w-16">
             <div
-              className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium border-2 transition-colors ${
+              className={`h-8 w-8 shrink-0 rounded-full inline-flex items-center justify-center text-sm font-semibold leading-none border-2 transition-colors ${
                 isDone
                   ? 'bg-primary border-primary text-primary-foreground'
                   : isActive
@@ -496,7 +498,7 @@ function StepIndicator({ current, steps }: { current: Step; steps: string[] }) {
               {isDone ? '✓' : n}
             </div>
             <span
-              className={`text-xs ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}
+              className={`text-xs text-center leading-tight ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}
             >
               {label}
             </span>

@@ -12,7 +12,10 @@ const schema = z.object({
   firstName: z.string().min(2, 'Mínimo 2 caracteres'),
   lastName: z.string().min(2, 'Mínimo 2 caracteres'),
   email: z.string().email('Email inválido'),
-  phone: z.string().optional(),
+  phone: z.string().refine(
+    (v) => { const d = v.replace(/\D/g, ''); return d.length >= 8 && d.length <= 15 },
+    { message: 'Teléfono inválido (8–15 dígitos)' }
+  ),
   paymentMethod: z.enum(['online', 'manual', 'preregister']),
   extraData: z.record(z.string(), z.union([z.string(), z.boolean()])).optional(),
 })
