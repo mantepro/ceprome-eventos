@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useActionState } from 'react'
+import { useState, useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -107,28 +107,7 @@ export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Pr
         </Field>
       </div>
 
-      <Field label="Imagen de portada">
-        {defaultValues?.cover_url && (
-          <div className="mb-2">
-            <Image
-              src={defaultValues.cover_url}
-              alt="Portada actual"
-              width={480}
-              height={270}
-              className="rounded-lg object-cover border w-full max-w-sm aspect-video"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Imagen actual — sube una nueva para reemplazar
-            </p>
-          </div>
-        )}
-        <Input
-          name="cover"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="cursor-pointer"
-        />
-      </Field>
+      <CoverField currentUrl={defaultValues?.cover_url ?? null} />
 
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={pending}>
@@ -136,6 +115,53 @@ export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Pr
         </Button>
       </div>
     </form>
+  )
+}
+
+function CoverField({ currentUrl }: { currentUrl: string | null }) {
+  const [sizeError, setSizeError] = useState<string | null>(null)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file && file.size > 2 * 1024 * 1024) {
+      setSizeError('La imagen supera el límite de 2MB.')
+      e.target.value = ''
+    } else {
+      setSizeError(null)
+    }
+  }
+
+  return (
+    <Field label="Imagen de portada">
+      {currentUrl && (
+        <div className="mb-2">
+          <Image
+            src={currentUrl}
+            alt="Portada actual"
+            width={480}
+            height={270}
+            className="rounded-lg object-cover border w-full max-w-sm aspect-video"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Imagen actual — sube una nueva para reemplazar
+          </p>
+        </div>
+      )}
+      <Input
+        name="cover"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="cursor-pointer"
+        onChange={handleFileChange}
+      />
+      {sizeError ? (
+        <p className="text-xs text-destructive mt-1">{sizeError}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground mt-1">
+          JPG o PNG · proporción 16:9 · mínimo 1280×720 · máximo 2MB
+        </p>
+      )}
+    </Field>
   )
 }
 

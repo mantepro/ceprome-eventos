@@ -44,14 +44,23 @@ async function uploadCover(
   orgId: string,
   eventId: string
 ): Promise<string | null> {
-  const ext = file.name.split('.').pop() ?? 'jpg'
+  const sharp = (await import('sharp')).default
+  const input = Buffer.from(await file.arrayBuffer())
+  const isPng = file.type === 'image/png'
+
+  const output = await sharp(input)
+    .resize(1920, null, { withoutEnlargement: true })
+    [isPng ? 'png' : 'jpeg']({ quality: 85 })
+    .toBuffer()
+
+  const ext = isPng ? 'png' : 'jpg'
+  const contentType = isPng ? 'image/png' : 'image/jpeg'
   const path = `${orgId}/${eventId}/cover.${ext}`
-  const buffer = Buffer.from(await file.arrayBuffer())
   const admin = createAdminClient()
 
   const { error } = await admin.storage
     .from('covers')
-    .upload(path, buffer, { contentType: file.type, upsert: true })
+    .upload(path, output, { contentType, upsert: true })
 
   if (error) {
     console.error('[uploadCover]', error)
