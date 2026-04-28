@@ -49,6 +49,11 @@ const TYPE_LABELS: Record<FieldType, string> = {
 
 const TYPES_WITH_OPTIONS: FieldType[] = ['select', 'radio']
 
+const SCOPE_LABELS = {
+  participant: 'Formulario público',
+  internal: 'Uso interno (solo admin)',
+}
+
 const BASE_FIELDS = ['Nombre', 'Apellido', 'Correo electrónico', 'Teléfono (opcional)']
 
 type Props = {
@@ -65,6 +70,7 @@ export function EventFieldsSection({ eventId, fields }: Props) {
   const boundCreate = createEventField.bind(null, eventId)
   const [createState, createFormAction, createPending] = useActionState(boundCreate, {})
   const [newType, setNewType] = useState<FieldType>('text')
+  const [newScope, setNewScope] = useState<'participant' | 'internal'>('participant')
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -205,6 +211,23 @@ export function EventFieldsSection({ eventId, fields }: Props) {
             </div>
           )}
 
+          <div className="space-y-1">
+            <Label className="text-xs">Alcance *</Label>
+            <Select
+              name="scope"
+              value={newScope}
+              onValueChange={(v) => setNewScope(v as 'participant' | 'internal')}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="participant">{SCOPE_LABELS.participant}</SelectItem>
+                <SelectItem value="internal">{SCOPE_LABELS.internal}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" name="required" className="h-4 w-4 rounded" />
@@ -240,6 +263,7 @@ function SortableFieldRow({
 
   const [isEditing, setIsEditing] = useState(false)
   const [editType, setEditType] = useState<FieldType>(field.field_type as FieldType)
+  const [editScope, setEditScope] = useState<'participant' | 'internal'>(field.scope as 'participant' | 'internal')
   const [deletePending, startDelete] = useTransition()
 
   const boundUpdate = updateEventField.bind(null, field.id, eventId)
@@ -266,13 +290,18 @@ function SortableFieldRow({
         <td className="py-2 w-6 cursor-grab text-muted-foreground" {...attributes} {...listeners}>
           <GripVertical className="h-4 w-4" />
         </td>
-        <td className="py-2 font-medium">{field.label}</td>
+        <td className="py-2 font-medium">
+          {field.label}
+          {field.scope === 'internal' && (
+            <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">Interno</span>
+          )}
+        </td>
         <td className="py-2 text-muted-foreground">{TYPE_LABELS[field.field_type as FieldType]}</td>
         <td className="py-2 text-center">{field.required ? '✓' : '—'}</td>
         <td className="py-2 text-right">
           <div className="flex gap-3 justify-end">
             <button
-              onClick={() => { setIsEditing((v) => !v); setEditType(field.field_type as FieldType) }}
+              onClick={() => { setIsEditing((v) => !v); setEditType(field.field_type as FieldType); setEditScope(field.scope as 'participant' | 'internal') }}
               className="text-xs text-primary hover:underline"
             >
               {isEditing ? 'Cancelar' : 'Editar'}
@@ -340,6 +369,23 @@ function SortableFieldRow({
                   />
                 </div>
               )}
+
+              <div className="space-y-1">
+                <Label className="text-xs">Alcance</Label>
+                <Select
+                  name="scope"
+                  value={editScope}
+                  onValueChange={(v) => setEditScope(v as 'participant' | 'internal')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="participant">{SCOPE_LABELS.participant}</SelectItem>
+                    <SelectItem value="internal">{SCOPE_LABELS.internal}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">

@@ -13,6 +13,7 @@ const fieldSchema = z.object({
   options: z.string().optional(),
   required: z.boolean().default(false),
   sort_order: z.coerce.number().int().min(0).default(0),
+  scope: z.enum(['participant', 'internal']).default('participant'),
 })
 
 function parseOptions(type: string, raw: string | undefined): string[] | null {
@@ -27,6 +28,7 @@ function parseFieldForm(formData: FormData) {
     options: (formData.get('options') as string) || undefined,
     required: formData.get('required') === 'on',
     sort_order: (formData.get('sort_order') as string) || '0',
+    scope: (formData.get('scope') as string) || 'participant',
   }
 }
 
@@ -47,7 +49,7 @@ export async function createEventField(
     }
   }
 
-  const { label, field_type, options, required, sort_order } = parsed.data
+  const { label, field_type, options, required, sort_order, scope } = parsed.data
   const supabase = await createClient()
 
   const { error } = await supabase.from('event_fields').insert({
@@ -58,6 +60,7 @@ export async function createEventField(
     options: parseOptions(field_type, options),
     required,
     sort_order,
+    scope,
   })
 
   if (error) return { error: 'Error al crear el campo.' }
@@ -84,7 +87,7 @@ export async function updateEventField(
     }
   }
 
-  const { label, field_type, options, required, sort_order } = parsed.data
+  const { label, field_type, options, required, sort_order, scope } = parsed.data
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -95,6 +98,7 @@ export async function updateEventField(
       options: parseOptions(field_type, options),
       required,
       sort_order,
+      scope,
     })
     .eq('id', fieldId)
     .eq('organization_id', profile.organization_id)

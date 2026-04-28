@@ -75,9 +75,9 @@ export const getRegistrations = cache(async (orgId: string) => {
   const { data } = await supabase
     .from('registrations')
     .select(`
-      id, folio, status, payment_method, total_amount, created_at,
-      events(name),
-      attendees(first_name, last_name, email),
+      id, folio, status, payment_method, total_amount, created_at, event_id,
+      events(id, name),
+      attendees(id, first_name, last_name, email, phone, extra_data),
       tickets(ticket_types(name, currency))
     `)
     .eq('organization_id', orgId)
@@ -154,20 +154,42 @@ export const getAdminEventFields = cache(async (eventId: string, orgId: string) 
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('event_fields')
-    .select('id, label, field_type, options, required, sort_order, active, created_at')
+    .select('id, event_id, label, field_type, options, required, sort_order, scope, active, created_at')
     .eq('event_id', eventId)
     .eq('organization_id', orgId)
     .order('sort_order', { ascending: true })
   return (data ?? []) as {
     id: string
+    event_id: string
     label: string
-    field_type: 'text' | 'select' | 'checkbox'
+    field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
     options: string[] | null
     required: boolean
     sort_order: number
+    scope: 'participant' | 'internal'
     active: boolean
     created_at: string
   }[]
 })
 
 export type AdminEventField = Awaited<ReturnType<typeof getAdminEventFields>>[number]
+
+export const getOrgFields = cache(async (orgId: string) => {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('event_fields')
+    .select('id, event_id, label, field_type, scope, options')
+    .eq('organization_id', orgId)
+    .eq('active', true)
+    .order('sort_order', { ascending: true })
+  return (data ?? []) as {
+    id: string
+    event_id: string
+    label: string
+    field_type: string
+    scope: 'participant' | 'internal'
+    options: string[] | null
+  }[]
+})
+
+export type OrgField = Awaited<ReturnType<typeof getOrgFields>>[number]

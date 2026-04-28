@@ -61,6 +61,7 @@ export async function getEventFields(eventId: string): Promise<EventField[]> {
     .select('*')
     .eq('event_id', eventId)
     .eq('active', true)
+    .eq('scope', 'participant')
     .order('sort_order', { ascending: true })
 
   return (data ?? []) as EventField[]

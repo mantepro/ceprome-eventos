@@ -390,6 +390,7 @@ export interface Database {
           options: string[] | null
           required: boolean
           sort_order: number
+          scope: 'participant' | 'internal'
           active: boolean
           created_at: string
         }
@@ -402,6 +403,7 @@ export interface Database {
           options?: string[] | null
           required?: boolean
           sort_order?: number
+          scope?: 'participant' | 'internal'
           active?: boolean
           created_at?: string
         }
