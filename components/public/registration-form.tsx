@@ -18,6 +18,7 @@ interface Props {
   orgSlug: string
   orgId: string
   preselectedTypeId?: string
+  preselectedPayment?: 'preregister'
   eventFields?: EventField[]
   allowPreregistration?: boolean
 }
@@ -28,6 +29,7 @@ export function RegistrationForm({
   orgSlug,
   orgId,
   preselectedTypeId,
+  preselectedPayment,
   eventFields = [],
   allowPreregistration = false,
 }: Props) {
@@ -38,7 +40,7 @@ export function RegistrationForm({
   const [phone, setPhone] = useState('')
   const [extraData, setExtraData] = useState<Record<string, string | boolean>>({})
   const [selectedTypeId, setSelectedTypeId] = useState(preselectedTypeId ?? '')
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>('')
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>(preselectedPayment ?? '')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
@@ -323,6 +325,8 @@ function ExtraField({
   value: string | boolean | undefined
   onChange: (val: string | boolean) => void
 }) {
+  const helperText = (field as { helper_text?: string | null }).helper_text
+
   return (
     <div className="space-y-1.5">
       <Label htmlFor={field.id}>
@@ -335,7 +339,7 @@ function ExtraField({
           id={field.id}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={field.label}
+          placeholder={helperText ?? field.label}
         />
       )}
 
@@ -344,7 +348,7 @@ function ExtraField({
           id={field.id}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={field.label}
+          placeholder={helperText ?? field.label}
           rows={3}
         />
       )}
@@ -355,7 +359,7 @@ function ExtraField({
           type="number"
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="0"
+          placeholder={helperText ?? '0'}
         />
       )}
 
@@ -411,6 +415,10 @@ function ExtraField({
           />
           {field.label}
         </label>
+      )}
+
+      {helperText && field.field_type !== 'text' && field.field_type !== 'textarea' && field.field_type !== 'number' && (
+        <p className="text-xs text-muted-foreground">{helperText}</p>
       )}
     </div>
   )

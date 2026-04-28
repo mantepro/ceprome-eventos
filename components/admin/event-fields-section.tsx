@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, useActionState } from 'react'
+import { useState, useTransition, useActionState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   DndContext,
   closestCenter,
@@ -62,8 +63,15 @@ type Props = {
 }
 
 export function EventFieldsSection({ eventId, fields }: Props) {
+  const router = useRouter()
   const [localFields, setLocalFields] = useState(fields)
   const [reorderPending, startReorder] = useTransition()
+  const [formKey, setFormKey] = useState(0)
+
+  // Sync when server refreshes with new fields
+  useEffect(() => {
+    setLocalFields(fields)
+  }, [fields])
 
   const sensors = useSensors(useSensor(PointerSensor))
 
@@ -71,6 +79,16 @@ export function EventFieldsSection({ eventId, fields }: Props) {
   const [createState, createFormAction, createPending] = useActionState(boundCreate, {})
   const [newType, setNewType] = useState<FieldType>('text')
   const [newScope, setNewScope] = useState<'participant' | 'internal'>('participant')
+
+  // Refresh page data and reset form on successful create
+  useEffect(() => {
+    if (createState.success) {
+      setFormKey(k => k + 1)
+      setNewType('text')
+      setNewScope('participant')
+      router.refresh()
+    }
+  }, [createState.success, router])
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -160,7 +178,7 @@ export function EventFieldsSection({ eventId, fields }: Props) {
       {/* Add field form */}
       <div className="border-t pt-4">
         <p className="text-sm font-semibold mb-3">Agregar campo personalizado</p>
-        <form action={createFormAction} className="space-y-3">
+        <form key={formKey} action={createFormAction} className="space-y-3">
           {createState.error && (
             <p className="text-xs text-destructive">{createState.error}</p>
           )}
@@ -211,21 +229,27 @@ export function EventFieldsSection({ eventId, fields }: Props) {
             </div>
           )}
 
-          <div className="space-y-1">
-            <Label className="text-xs">Alcance *</Label>
-            <Select
-              name="scope"
-              value={newScope}
-              onValueChange={(v) => setNewScope(v as 'participant' | 'internal')}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="participant">{SCOPE_LABELS.participant}</SelectItem>
-                <SelectItem value="internal">{SCOPE_LABELS.internal}</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Texto de ayuda</Label>
+              <Input name="helper_text" placeholder="Instrucción o ejemplo visible en el formulario" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Alcance *</Label>
+              <Select
+                name="scope"
+                value={newScope}
+                onValueChange={(v) => setNewScope(v as 'participant' | 'internal')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="participant">{SCOPE_LABELS.participant}</SelectItem>
+                  <SelectItem value="internal">{SCOPE_LABELS.internal}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -370,21 +394,31 @@ function SortableFieldRow({
                 </div>
               )}
 
-              <div className="space-y-1">
-                <Label className="text-xs">Alcance</Label>
-                <Select
-                  name="scope"
-                  value={editScope}
-                  onValueChange={(v) => setEditScope(v as 'participant' | 'internal')}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="participant">{SCOPE_LABELS.participant}</SelectItem>
-                    <SelectItem value="internal">{SCOPE_LABELS.internal}</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Texto de ayuda</Label>
+                  <Input
+                    name="helper_text"
+                    defaultValue={field.helper_text ?? ''}
+                    placeholder="Instrucción o ejemplo"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Alcance</Label>
+                  <Select
+                    name="scope"
+                    value={editScope}
+                    onValueChange={(v) => setEditScope(v as 'participant' | 'internal')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="participant">{SCOPE_LABELS.participant}</SelectItem>
+                      <SelectItem value="internal">{SCOPE_LABELS.internal}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="flex items-center gap-4">

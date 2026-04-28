@@ -59,6 +59,19 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 
   const internalFields = useMemo(() => orgFields.filter(f => f.scope === 'internal'), [orgFields])
 
+  // Derive which event is "active" in the current filtered view to show custom columns
+  const singleEventId = useMemo(() => {
+    if (eventFilter !== 'all') return eventFilter
+    const ids = new Set(registrations.map(r => (r as { event_id: string }).event_id).filter(Boolean))
+    return ids.size === 1 ? Array.from(ids)[0] : null
+  }, [eventFilter, registrations])
+
+  const visibleParticipantFields = useMemo(() =>
+    singleEventId
+      ? orgFields.filter(f => f.event_id === singleEventId && f.scope === 'participant')
+      : []
+  , [orgFields, singleEventId])
+
   const uniqueEvents = useMemo(() => {
     const map = new Map<string, string>()
     for (const r of registrations) {
@@ -270,6 +283,11 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 <th className="px-4 py-3 text-left font-medium">Método</th>
                 <SortTH col="status" active={sortCol} dir={sortDir} onSort={handleSort}>Estado</SortTH>
                 <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort}>Fecha</SortTH>
+                {visibleParticipantFields.map(f => (
+                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs whitespace-nowrap">
+                    {f.label}
+                  </th>
+                ))}
                 {internalFields.length > 0 && (
                   <th className="px-4 py-3 text-left font-medium text-purple-700">Campos internos</th>
                 )}
@@ -281,6 +299,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 <RegistrationRow
                   key={reg.id}
                   reg={reg}
+                  participantFields={visibleParticipantFields}
                   internalFields={internalFields.filter(f => (f as { event_id: string }).event_id === (reg as { event_id: string }).event_id)}
                   onStatusChange={handleStatusChange}
                   onInternalSave={handleInternalSave}
@@ -354,11 +373,13 @@ function SortTH({
 
 function RegistrationRow({
   reg,
+  participantFields,
   internalFields,
   onStatusChange,
   onInternalSave,
 }: {
   reg: RegistrationRow
+  participantFields: OrgField[]
   internalFields: OrgField[]
   onStatusChange: (id: string, status: string) => Promise<void>
   onInternalSave: (regId: string, attendeeId: string, updates: Record<string, string | boolean>) => void
@@ -420,6 +441,18 @@ function RegistrationRow({
         </select>
       </td>
       <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>
+      {participantFields.map(f => {
+        const extra = (attendee?.extra_data as Record<string, unknown>) ?? {}
+        const v = extra[f.id]
+        const display = v === true ? 'Sí' : v === false ? 'No' : v != null ? String(v) : '—'
+        return (
+          <td key={f.id} className="px-4 py-3 text-xs max-w-[140px]">
+            <span className="block truncate" title={display !== '—' ? display : undefined}>
+              {display}
+            </span>
+          </td>
+        )
+      })}
       {internalFields.length > 0 && (
         <td className="px-4 py-3">
           {attendee && (

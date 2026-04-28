@@ -3,7 +3,7 @@ import { getOrgBySlug, getPublishedEvent, getActiveTicketTypes, getEventFields }
 import { RegistrationForm } from '@/components/public/registration-form'
 
 type Params = Promise<{ slug: string; id: string }>
-type SearchParams = Promise<{ tipo?: string }>
+type SearchParams = Promise<{ tipo?: string; prereg?: string }>
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug, id } = await params
@@ -20,7 +20,7 @@ export default async function RegistrationPage({
   searchParams: SearchParams
 }) {
   const { slug, id } = await params
-  const { tipo } = await searchParams
+  const { tipo, prereg } = await searchParams
   const org = await getOrgBySlug(slug)
   const [event, ticketTypes, eventFields] = await Promise.all([
     getPublishedEvent(org.id, id),
@@ -40,6 +40,7 @@ export default async function RegistrationPage({
         orgSlug={slug}
         orgId={org.id}
         preselectedTypeId={tipo}
+        preselectedPayment={prereg === '1' ? 'preregister' : undefined}
         eventFields={eventFields}
         allowPreregistration={event.allow_preregistration}
       />

@@ -388,6 +388,7 @@ export interface Database {
           label: string
           field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
           options: string[] | null
+          helper_text: string | null
           required: boolean
           sort_order: number
           scope: 'participant' | 'internal'
@@ -401,6 +402,7 @@ export interface Database {
           label: string
           field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
           options?: string[] | null
+          helper_text?: string | null
           required?: boolean
           sort_order?: number
           scope?: 'participant' | 'internal'

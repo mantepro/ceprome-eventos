@@ -808,3 +808,7 @@ ALTER TABLE public.event_fields ADD CONSTRAINT event_fields_field_type_check
 ALTER TABLE public.event_fields
   ADD COLUMN IF NOT EXISTS scope text NOT NULL DEFAULT 'participant'
   CHECK (scope IN ('participant', 'internal'));
+
+-- Texto de ayuda visible en el formulario bajo el campo
+ALTER TABLE public.event_fields
+  ADD COLUMN IF NOT EXISTS helper_text text;

@@ -124,6 +124,7 @@ export default async function EventDetailPage({ params }: { params: Params }) {
                   ticketType={tt}
                   orgSlug={slug}
                   eventId={event.id}
+                  allowPreregistration={event.allow_preregistration}
                 />
               ))
             )}

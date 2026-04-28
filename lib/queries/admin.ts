@@ -154,7 +154,7 @@ export const getAdminEventFields = cache(async (eventId: string, orgId: string) 
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('event_fields')
-    .select('id, event_id, label, field_type, options, required, sort_order, scope, active, created_at')
+    .select('id, event_id, label, field_type, options, helper_text, required, sort_order, scope, active, created_at')
     .eq('event_id', eventId)
     .eq('organization_id', orgId)
     .order('sort_order', { ascending: true })
@@ -164,6 +164,7 @@ export const getAdminEventFields = cache(async (eventId: string, orgId: string) 
     label: string
     field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date'
     options: string[] | null
+    helper_text: string | null
     required: boolean
     sort_order: number
     scope: 'participant' | 'internal'

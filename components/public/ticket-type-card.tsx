@@ -9,6 +9,7 @@ interface Props {
   ticketType: TicketType
   orgSlug: string
   eventId: string
+  allowPreregistration?: boolean
 }
 
 function getAvailability(tt: TicketType): { label: string; urgent: boolean; available: boolean } {
@@ -19,8 +20,9 @@ function getAvailability(tt: TicketType): { label: string; urgent: boolean; avai
   return { label: 'Disponible', urgent: false, available: true }
 }
 
-export function TicketTypeCard({ ticketType, orgSlug, eventId }: Props) {
+export function TicketTypeCard({ ticketType, orgSlug, eventId, allowPreregistration = false }: Props) {
   const { label, urgent, available } = getAvailability(ticketType)
+  const base = `/${orgSlug}/registro/${eventId}?tipo=${ticketType.id}`
 
   return (
     <Card className={!available ? 'opacity-60' : ''}>
@@ -43,13 +45,18 @@ export function TicketTypeCard({ ticketType, orgSlug, eventId }: Props) {
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">{ticketType.currency}</p>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-2">
         {available ? (
-          <Button asChild className="w-full">
-            <Link href={`/${orgSlug}/registro/${eventId}?tipo=${ticketType.id}`}>
-              Registrarme
-            </Link>
-          </Button>
+          <>
+            <Button asChild className="w-full">
+              <Link href={base}>Registrarme y pagar</Link>
+            </Button>
+            {allowPreregistration && (
+              <Button asChild variant="outline" className="w-full">
+                <Link href={`${base}&prereg=1`}>Pre-registrarme</Link>
+              </Button>
+            )}
+          </>
         ) : (
           <Button className="w-full" disabled>
             No disponible
