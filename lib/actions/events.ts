@@ -26,6 +26,7 @@ const eventSchema = z.object({
     message: 'Estado requerido',
   }),
   allow_preregistration: z.boolean().default(false),
+  invoice_instructions: z.string().optional(),
 })
 
 function parseFormData(formData: FormData) {
@@ -38,6 +39,7 @@ function parseFormData(formData: FormData) {
     modality: formData.get('modality') as string,
     status: formData.get('status') as string,
     allow_preregistration: formData.get('allow_preregistration') === 'on',
+    invoice_instructions: (formData.get('invoice_instructions') as string) || undefined,
   }
 }
 
@@ -89,7 +91,7 @@ export async function createEvent(
     }
   }
 
-  const { name, description, location, starts_at, ends_at, modality, status, allow_preregistration } = parsed.data
+  const { name, description, location, starts_at, ends_at, modality, status, allow_preregistration, invoice_instructions } = parsed.data
   const supabase = await createClient()
   const eventId = crypto.randomUUID()
 
@@ -106,6 +108,7 @@ export async function createEvent(
       modality,
       status,
       allow_preregistration,
+      invoice_instructions: invoice_instructions ?? null,
     })
 
   if (error) return { error: 'Error al crear el evento.' }
@@ -131,7 +134,7 @@ export async function updateEvent(
     }
   }
 
-  const { name, description, location, starts_at, ends_at, modality, status, allow_preregistration } = parsed.data
+  const { name, description, location, starts_at, ends_at, modality, status, allow_preregistration, invoice_instructions } = parsed.data
 
   // Handle cover image upload
   const coverFile = formData.get('cover')
@@ -153,6 +156,7 @@ export async function updateEvent(
       modality,
       status,
       allow_preregistration,
+      invoice_instructions: invoice_instructions ?? null,
       ...(coverUrl !== undefined && { cover_url: coverUrl }),
     })
     .eq('id', eventId)

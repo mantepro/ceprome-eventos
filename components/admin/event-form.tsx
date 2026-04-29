@@ -127,6 +127,18 @@ export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Pr
         </div>
       </div>
 
+      <Field label="Instrucciones de factura fiscal (opcional)">
+        <Textarea
+          name="invoice_instructions"
+          defaultValue={defaultValues?.invoice_instructions ?? ''}
+          placeholder={`Si el participante solicita factura fiscal, incluir en el correo de confirmación:\n\nEjemplo: Envía tus datos fiscales a economia@ceprome.org indicando tu folio. Tiempo de respuesta: 5 días hábiles.`}
+          rows={4}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Si hay texto aquí, se incluirá en el correo de los participantes que marquen &quot;Sí, requiero factura fiscal&quot;. Déjalo vacío si el evento no maneja facturas.
+        </p>
+      </Field>
+
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={pending}>
           {pending ? 'Guardando…' : submitLabel}

@@ -40,6 +40,7 @@ export interface Database {
           status: 'draft' | 'published' | 'closed' | 'cancelled'
           cover_url: string | null
           allow_preregistration: boolean
+          invoice_instructions: string | null
           created_at: string
         }
         Insert: {
@@ -54,6 +55,7 @@ export interface Database {
           status?: 'draft' | 'published' | 'closed' | 'cancelled'
           cover_url?: string | null
           allow_preregistration?: boolean
+          invoice_instructions?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['events']['Insert']>

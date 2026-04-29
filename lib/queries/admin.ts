@@ -128,7 +128,7 @@ export const getEventById = cache(async (id: string, orgId: string) => {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('events')
-    .select('id, name, description, location, starts_at, ends_at, modality, status, cover_url, allow_preregistration')
+    .select('id, name, description, location, starts_at, ends_at, modality, status, cover_url, allow_preregistration, invoice_instructions')
     .eq('id', id)
     .eq('organization_id', orgId)
     .single()

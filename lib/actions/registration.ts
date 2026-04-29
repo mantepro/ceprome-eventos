@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { sendConfirmationEmail } from '@/lib/email/confirmation'
+import { formatDate } from '@/lib/utils'
 
 const schema = z.object({
   orgSlug: z.string().min(1),
@@ -43,7 +45,7 @@ export async function createRegistration(
 
   const { data: ticketType } = await supabase
     .from('ticket_types')
-    .select('id, price, currency, capacity, sold_count')
+    .select('id, name, price, currency, capacity, sold_count')
     .eq('id', ticketTypeId)
     .eq('event_id', eventId)
     .eq('organization_id', orgId)
@@ -129,6 +131,44 @@ export async function createRegistration(
       console.error('[createRegistration] payments INSERT failed:', JSON.stringify(paymentError, null, 2))
       return { error: 'Error al registrar el pago.' }
     }
+  }
+
+  // Fire confirmation email — failure must not block the registration redirect
+  try {
+    const [{ data: eventData }, { data: orgData }] = await Promise.all([
+      supabase
+        .from('events')
+        .select('name, starts_at, location, invoice_instructions')
+        .eq('id', eventId)
+        .single(),
+      supabase
+        .from('organizations')
+        .select('name, email')
+        .eq('id', orgId)
+        .single(),
+    ])
+
+    if (eventData && orgData) {
+      await sendConfirmationEmail({
+        folio,
+        attendeeName: `${firstName} ${lastName}`,
+        attendeeEmail: email,
+        eventName: eventData.name,
+        eventDate: formatDate(eventData.starts_at),
+        eventLocation: eventData.location,
+        ticketType: ticketType.name,
+        amount: ticketType.price,
+        currency: ticketType.currency,
+        orgName: orgData.name,
+        orgEmail: orgData.email,
+        paymentMethod,
+        extraData: (extraData as Record<string, string | boolean>) ?? {},
+        invoiceInstructions: eventData.invoice_instructions,
+        registrationDate: formatDate(new Date().toISOString()),
+      })
+    }
+  } catch (err) {
+    console.error('[sendConfirmationEmail]', err)
   }
 
   redirect(`/${orgSlug}/confirmar/${folio}`)

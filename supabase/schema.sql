@@ -812,3 +812,6 @@ ALTER TABLE public.event_fields
 -- Texto de ayuda visible en el formulario bajo el campo
 ALTER TABLE public.event_fields
   ADD COLUMN IF NOT EXISTS helper_text text;
+
+-- Instrucciones de factura configurables por evento
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS invoice_instructions text;
