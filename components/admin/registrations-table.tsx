@@ -61,12 +61,17 @@ const TOGGLEABLE_COLS = [
 // Zebra row backgrounds
 const ROW_BG = ['#ffffff', '#f9fafb'] as const
 
-// Sticky column constants
+// Sticky column constants — body rows (horizontal only)
 const STICKY_FOLIO  = { position: 'sticky' as const, left: 0,   zIndex: 2, minWidth: 116 }
 const STICKY_NOMBRE = { position: 'sticky' as const, left: 116, zIndex: 2, minWidth: 200 }
 const STICKY_ESTADO = { position: 'sticky' as const, left: 316, zIndex: 2, minWidth: 136 }
-const BG_HEAD       = 'hsl(var(--muted) / 0.5)'
+// Header cells: doubly sticky (vertical top:0 + horizontal left:X) with solid opaque background
+const BG_HEAD       = '#f9fafb'
 const SHADOW_RIGHT  = '2px 0 4px -1px rgba(0,0,0,0.08)'
+const TH_BASE       = { position: 'sticky' as const, top: 0, zIndex: 3,  backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_FOLIO      = { ...STICKY_FOLIO,  top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_NOMBRE     = { ...STICKY_NOMBRE, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_ESTADO     = { ...STICKY_ESTADO, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const, boxShadow: SHADOW_RIGHT }
 
 interface Props {
   registrations: RegistrationRow[]
@@ -388,37 +393,37 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
               <tr>
                 {/* ── Sticky: Folio ── */}
                 <SortTH col="folio" active={sortCol} dir={sortDir} onSort={handleSort}
-                  style={{ ...STICKY_FOLIO, backgroundColor: BG_HEAD }}>
+                  style={TH_FOLIO}>
                   Folio
                 </SortTH>
                 {/* ── Sticky: Nombre ── */}
                 <SortTH col="name" active={sortCol} dir={sortDir} onSort={handleSort}
-                  style={{ ...STICKY_NOMBRE, backgroundColor: BG_HEAD }}>
+                  style={TH_NOMBRE}>
                   Nombre
                 </SortTH>
                 {/* ── Sticky: Estado ── */}
                 <th
                   className="px-4 py-3 text-left font-medium whitespace-nowrap"
-                  style={{ ...STICKY_ESTADO, backgroundColor: BG_HEAD, boxShadow: SHADOW_RIGHT }}
+                  style={TH_ESTADO}
                 >
                   Estado
                 </th>
-                {show('phone')       && <th className="px-4 py-3 text-left font-medium whitespace-nowrap bg-muted/50">Teléfono</th>}
-                {show('event')       && <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap bg-muted/50">Evento</SortTH>}
-                {show('ticket_type') && <SortTH col="ticket_type" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-normal bg-muted/50">Tipo de<br />acceso</SortTH>}
-                {show('amount')      && <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right whitespace-nowrap bg-muted/50">Monto</SortTH>}
-                {show('method')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap bg-muted/50">Método</th>}
-                {show('date')        && <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap bg-muted/50">Fecha</SortTH>}
-                {show('acceso')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap bg-muted/50">Acceso</th>}
+                {show('phone')       && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Teléfono</th>}
+                {show('event')       && <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Evento</SortTH>}
+                {show('ticket_type') && <SortTH col="ticket_type" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Tipo</SortTH>}
+                {show('amount')      && <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right whitespace-nowrap" style={TH_BASE}>Monto</SortTH>}
+                {show('method')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Método</th>}
+                {show('date')        && <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Fecha</SortTH>}
+                {show('acceso')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Acceso</th>}
                 {visibleParticipantFields.map((f) => (
-                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs whitespace-normal max-w-[120px] bg-muted/50">
+                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs whitespace-nowrap max-w-[120px]" style={TH_BASE}>
                     {f.label}
                   </th>
                 ))}
                 {internalFields.length > 0 && (
-                  <th className="px-4 py-3 text-left font-medium text-purple-700 whitespace-nowrap bg-muted/50">Campos internos</th>
+                  <th className="px-4 py-3 text-left font-medium text-purple-700 whitespace-nowrap" style={TH_BASE}>Campos internos</th>
                 )}
-                <th className="px-4 py-3 bg-muted/50"></th>
+                <th className="px-4 py-3" style={TH_BASE}></th>
               </tr>
             </thead>
             <tbody className="divide-y">

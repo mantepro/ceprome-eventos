@@ -14,26 +14,29 @@ export type TicketEmailParams = {
   ticketTypeName: string
   qrUrl: string
   qrBuffer: Buffer
+  pdfBuffer?: Buffer
 }
 
 export async function sendTicketEmail(params: TicketEmailParams) {
   const {
     to, firstName, lastName, folio,
     eventName, eventStartsAt, eventLocation,
-    ticketTypeName, qrUrl, qrBuffer,
+    ticketTypeName, qrUrl, qrBuffer, pdfBuffer,
   } = params
+
+  const attachments: { filename: string; content: string }[] = [
+    { filename: `ticket-${folio}.png`, content: qrBuffer.toString('base64') },
+  ]
+  if (pdfBuffer) {
+    attachments.push({ filename: `comprobante-${folio}.pdf`, content: pdfBuffer.toString('base64') })
+  }
 
   const { error } = await resend.emails.send({
     from: process.env.RESEND_FROM!,
     to,
     subject: `Tu ticket — ${eventName} · ${folio}`,
     html: buildEmailHtml(params),
-    attachments: [
-      {
-        filename: `ticket-${folio}.png`,
-        content: qrBuffer.toString('base64'),
-      },
-    ],
+    attachments,
   })
 
   if (error) {
