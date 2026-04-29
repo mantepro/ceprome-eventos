@@ -70,6 +70,24 @@ export const getPendingPayments = cache(async (orgId: string) => {
 
 export type PendingPayment = Awaited<ReturnType<typeof getPendingPayments>>[number]
 
+export const getPendingPreregs = cache(async (orgId: string) => {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('registrations')
+    .select(`
+      id, folio, total_amount, created_at,
+      events(name),
+      attendees(first_name, last_name, email),
+      tickets(ticket_types(name, currency))
+    `)
+    .eq('organization_id', orgId)
+    .eq('status', 'draft')
+    .order('created_at', { ascending: false })
+  return data ?? []
+})
+
+export type PendingPrereg = Awaited<ReturnType<typeof getPendingPreregs>>[number]
+
 export const getRegistrations = cache(async (orgId: string) => {
   const supabase = createAdminClient()
   const { data } = await supabase

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserProfile } from '@/lib/queries/admin'
-import { generateAndSendTicket } from '@/lib/actions/generate-ticket'
+import { confirmPayment } from '@/lib/actions/payments'
 import type { Json } from '@/types/database'
 
 type RegistrationStatus = 'draft' | 'pending' | 'paid' | 'cancelled'
@@ -12,6 +12,11 @@ export async function updateRegistrationStatus(
   registrationId: string,
   newStatus: RegistrationStatus
 ): Promise<{ error?: string }> {
+  // All payment confirmation logic lives in confirmPayment
+  if (newStatus === 'paid') {
+    return confirmPayment(registrationId)
+  }
+
   const profile = await getCurrentUserProfile()
   if (!profile) return { error: 'No autorizado.' }
 
@@ -23,18 +28,6 @@ export async function updateRegistrationStatus(
     .eq('organization_id', profile.organization_id)
 
   if (error) return { error: 'Error al actualizar el estado.' }
-
-  if (newStatus === 'paid') {
-    await supabase
-      .from('tickets')
-      .update({ status: 'active' })
-      .eq('registration_id', registrationId)
-      .eq('status', 'pending')
-
-    generateAndSendTicket(registrationId).catch((err) =>
-      console.error('[updateRegistrationStatus] generateAndSendTicket:', err)
-    )
-  }
 
   revalidatePath('/admin/inscritos')
   return {}

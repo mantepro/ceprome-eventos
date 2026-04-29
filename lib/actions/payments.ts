@@ -1,49 +1,88 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentUserProfile } from '@/lib/queries/admin'
 import { generateAndSendTicket } from '@/lib/actions/generate-ticket'
 
-export async function validatePayment(
-  paymentId: string
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'No autorizado.' }
+export async function confirmPayment(registrationId: string): Promise<{ error?: string }> {
+  const profile = await getCurrentUserProfile()
+  if (!profile) return { error: 'No autorizado.' }
 
-  const { data: payment } = await supabase
-    .from('payments')
-    .select('id, registration_id, organization_id, status')
-    .eq('id', paymentId)
+  const supabase = createAdminClient()
+
+  const { data: reg } = await supabase
+    .from('registrations')
+    .select('id, status, total_amount')
+    .eq('id', registrationId)
+    .eq('organization_id', profile.organization_id)
     .single()
 
-  if (!payment) return { error: 'Pago no encontrado.' }
-  if (payment.status !== 'pending') return { error: 'Este pago ya fue procesado.' }
+  if (!reg) return { error: 'Inscripción no encontrada.' }
+  if (reg.status === 'paid') return {}
 
-  const { error: payErr } = await supabase
+  // If there's a pending payment record, mark it completed
+  const { data: pendingPayment } = await supabase
     .from('payments')
-    .update({
-      status: 'completed',
-      verified_by: user.id,
-      verified_at: new Date().toISOString(),
-    })
-    .eq('id', paymentId)
+    .select('id')
+    .eq('registration_id', registrationId)
+    .eq('status', 'pending')
+    .maybeSingle()
 
-  if (payErr) return { error: 'Error al validar el pago.' }
+  if (pendingPayment) {
+    await supabase
+      .from('payments')
+      .update({
+        status: 'completed',
+        verified_by: profile.id,
+        verified_at: new Date().toISOString(),
+      })
+      .eq('id', pendingPayment.id)
+  } else {
+    // No pending payment — check if already completed to avoid duplicate
+    const { data: completedPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('registration_id', registrationId)
+      .eq('status', 'completed')
+      .maybeSingle()
+
+    if (!completedPayment) {
+      // Pre-registro or admin manual confirm without prior payment entry — create one
+      const { data: ticketRow } = await supabase
+        .from('tickets')
+        .select('ticket_types(currency)')
+        .eq('registration_id', registrationId)
+        .limit(1)
+        .maybeSingle()
+      const currency = (ticketRow?.ticket_types as { currency: string } | null)?.currency ?? 'USD'
+
+      await supabase.from('payments').insert({
+        registration_id: registrationId,
+        organization_id: profile.organization_id,
+        amount: reg.total_amount,
+        currency,
+        method: 'manual',
+        status: 'completed',
+        verified_by: profile.id,
+        verified_at: new Date().toISOString(),
+      })
+    }
+  }
 
   await supabase
     .from('registrations')
     .update({ status: 'paid' })
-    .eq('id', payment.registration_id)
+    .eq('id', registrationId)
 
   await supabase
     .from('tickets')
     .update({ status: 'active' })
-    .eq('registration_id', payment.registration_id)
+    .eq('registration_id', registrationId)
     .eq('status', 'pending')
 
-  generateAndSendTicket(payment.registration_id).catch((err) =>
-    console.error('[validatePayment] generateAndSendTicket:', err)
+  generateAndSendTicket(registrationId).catch((err) =>
+    console.error('[confirmPayment] generateAndSendTicket:', err)
   )
 
   revalidatePath('/admin/pagos')
@@ -53,17 +92,34 @@ export async function validatePayment(
   return {}
 }
 
-export async function rejectPayment(
-  paymentId: string
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'No autorizado.' }
+export async function validatePayment(paymentId: string): Promise<{ error?: string }> {
+  const profile = await getCurrentUserProfile()
+  if (!profile) return { error: 'No autorizado.' }
 
+  const supabase = createAdminClient()
   const { data: payment } = await supabase
     .from('payments')
     .select('id, registration_id, status')
     .eq('id', paymentId)
+    .eq('organization_id', profile.organization_id)
+    .single()
+
+  if (!payment) return { error: 'Pago no encontrado.' }
+  if (payment.status !== 'pending') return { error: 'Este pago ya fue procesado.' }
+
+  return confirmPayment(payment.registration_id)
+}
+
+export async function rejectPayment(paymentId: string): Promise<{ error?: string }> {
+  const profile = await getCurrentUserProfile()
+  if (!profile) return { error: 'No autorizado.' }
+
+  const supabase = createAdminClient()
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('id, registration_id, status')
+    .eq('id', paymentId)
+    .eq('organization_id', profile.organization_id)
     .single()
 
   if (!payment) return { error: 'Pago no encontrado.' }
@@ -73,7 +129,7 @@ export async function rejectPayment(
     .from('payments')
     .update({
       status: 'failed',
-      verified_by: user.id,
+      verified_by: profile.id,
       verified_at: new Date().toISOString(),
     })
     .eq('id', paymentId)

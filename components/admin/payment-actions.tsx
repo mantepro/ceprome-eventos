@@ -1,14 +1,11 @@
 'use client'
 
 import { useTransition } from 'react'
-import { validatePayment, rejectPayment } from '@/lib/actions/payments'
+import { validatePayment, rejectPayment, confirmPayment } from '@/lib/actions/payments'
+import { updateRegistrationStatus } from '@/lib/actions/registrations'
 import { Button } from '@/components/ui/button'
 
-interface Props {
-  paymentId: string
-}
-
-export function PaymentActions({ paymentId }: Props) {
+export function PaymentActions({ paymentId }: { paymentId: string }) {
   const [validating, startValidate] = useTransition()
   const [rejecting, startReject] = useTransition()
 
@@ -29,11 +26,7 @@ export function PaymentActions({ paymentId }: Props) {
 
   return (
     <div className="flex items-center gap-2">
-      <Button
-        size="sm"
-        onClick={handleValidate}
-        disabled={validating || rejecting}
-      >
+      <Button size="sm" onClick={handleValidate} disabled={validating || rejecting}>
         {validating ? 'Validando…' : 'Validar pago'}
       </Button>
       <Button
@@ -44,6 +37,43 @@ export function PaymentActions({ paymentId }: Props) {
         className="text-destructive hover:text-destructive"
       >
         {rejecting ? 'Rechazando…' : 'Rechazar'}
+      </Button>
+    </div>
+  )
+}
+
+export function PreregActions({ registrationId }: { registrationId: string }) {
+  const [confirming, startConfirm] = useTransition()
+  const [cancelling, startCancel] = useTransition()
+
+  function handleConfirm() {
+    startConfirm(async () => {
+      const result = await confirmPayment(registrationId)
+      if (result.error) alert(result.error)
+    })
+  }
+
+  function handleCancel() {
+    if (!confirm('¿Cancelar esta pre-inscripción? El lugar reservado quedará liberado.')) return
+    startCancel(async () => {
+      const result = await updateRegistrationStatus(registrationId, 'cancelled')
+      if (result.error) alert(result.error)
+    })
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button size="sm" onClick={handleConfirm} disabled={confirming || cancelling}>
+        {confirming ? 'Confirmando…' : 'Validar pago'}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={handleCancel}
+        disabled={confirming || cancelling}
+        className="text-destructive hover:text-destructive"
+      >
+        {cancelling ? 'Cancelando…' : 'Cancelar'}
       </Button>
     </div>
   )
