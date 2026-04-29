@@ -48,31 +48,39 @@ async function uploadCover(
   orgId: string,
   eventId: string
 ): Promise<string | null> {
-  const sharp = (await import('sharp')).default
-  const input = Buffer.from(await file.arrayBuffer())
-  const isPng = file.type === 'image/png'
+  try {
+    const sharp = (await import('sharp')).default
+    const input = Buffer.from(await file.arrayBuffer())
+    const isPng = file.type === 'image/png'
+    const isWebp = file.type === 'image/webp'
 
-  const output = await sharp(input)
-    .resize(1920, null, { withoutEnlargement: true })
-    [isPng ? 'png' : 'jpeg']({ quality: 85 })
-    .toBuffer()
+    const pipeline = sharp(input).resize(1920, null, { withoutEnlargement: true })
+    const output = isPng
+      ? await pipeline.png({ quality: 85 }).toBuffer()
+      : isWebp
+      ? await pipeline.webp({ quality: 85 }).toBuffer()
+      : await pipeline.jpeg({ quality: 85 }).toBuffer()
 
-  const ext = isPng ? 'png' : 'jpg'
-  const contentType = isPng ? 'image/png' : 'image/jpeg'
-  const path = `${orgId}/${eventId}/cover.${ext}`
-  const admin = createAdminClient()
+    const ext = isPng ? 'png' : isWebp ? 'webp' : 'jpg'
+    const contentType = isPng ? 'image/png' : isWebp ? 'image/webp' : 'image/jpeg'
+    const path = `${orgId}/${eventId}/cover.${ext}`
+    const admin = createAdminClient()
 
-  const { error } = await admin.storage
-    .from('covers')
-    .upload(path, output, { contentType, upsert: true })
+    const { error } = await admin.storage
+      .from('covers')
+      .upload(path, output, { contentType, upsert: true })
 
-  if (error) {
-    console.error('[uploadCover]', error)
+    if (error) {
+      console.error('[uploadCover] storage error:', error.message)
+      return null
+    }
+
+    const { data } = admin.storage.from('covers').getPublicUrl(path)
+    return data.publicUrl
+  } catch (err) {
+    console.error('[uploadCover] unexpected error:', err)
     return null
   }
-
-  const { data } = admin.storage.from('covers').getPublicUrl(path)
-  return data.publicUrl
 }
 
 export async function createEvent(
@@ -140,8 +148,12 @@ export async function updateEvent(
   const coverFile = formData.get('cover')
   let coverUrl: string | undefined
   if (coverFile instanceof File && coverFile.size > 0) {
+    if (coverFile.size > 10 * 1024 * 1024) {
+      return { error: 'La imagen supera el límite de 10 MB.' }
+    }
     const url = await uploadCover(coverFile, profile.organization_id, eventId)
-    if (url) coverUrl = url
+    if (!url) return { error: 'No se pudo subir la imagen. Verifica que el bucket "covers" existe en Supabase Storage.' }
+    coverUrl = url
   }
 
   const supabase = await createClient()
