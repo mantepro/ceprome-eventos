@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition, useMemo, useEffect } from 'react'
+import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,6 +41,24 @@ const METHOD_LABELS: Record<string, string> = {
 
 const PAGE_SIZE = 25
 
+const TOGGLEABLE_COLS = [
+  { id: 'phone',       label: 'Teléfono' },
+  { id: 'event',       label: 'Evento' },
+  { id: 'ticket_type', label: 'Tipo de acceso' },
+  { id: 'amount',      label: 'Monto' },
+  { id: 'method',      label: 'Método' },
+  { id: 'date',        label: 'Fecha' },
+] as const
+
+// Sticky column inline style helpers
+const STICKY_FOLIO  = { position: 'sticky' as const, left: 0,   zIndex: 2, minWidth: 116 }
+const STICKY_NOMBRE = { position: 'sticky' as const, left: 116, zIndex: 2, minWidth: 200 }
+const STICKY_ESTADO = { position: 'sticky' as const, left: 316, zIndex: 2, minWidth: 136 }
+
+const BG_HEAD = 'hsl(var(--muted) / 0.5)'
+const BG_ROW  = 'hsl(var(--background))'
+const SHADOW_RIGHT = '2px 0 4px -1px rgba(0,0,0,0.08)'
+
 interface Props {
   registrations: RegistrationRow[]
   orgFields: OrgField[]
@@ -56,10 +74,23 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const [sortCol, setSortCol] = useState<SortCol>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
+  const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set())
+  const [showColPicker, setShowColPicker] = useState(false)
+  const colPickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showColPicker) return
+    function handleClick(e: MouseEvent) {
+      if (colPickerRef.current && !colPickerRef.current.contains(e.target as Node)) {
+        setShowColPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showColPicker])
 
   const internalFields = useMemo(() => orgFields.filter(f => f.scope === 'internal'), [orgFields])
 
-  // Derive which event is "active" in the current filtered view to show custom columns
   const singleEventId = useMemo(() => {
     if (eventFilter !== 'all') return eventFilter
     const ids = new Set(registrations.map(r => (r as { event_id: string }).event_id).filter(Boolean))
@@ -192,6 +223,16 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     window.location.href = `/api/admin/export/inscritos?${params}`
   }
 
+  function toggleCol(id: string) {
+    setHiddenCols(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  const show = (id: string) => !hiddenCols.has(id)
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -202,9 +243,40 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
           onChange={e => { setSearch(e.target.value); resetPage() }}
           className="sm:max-w-xs"
         />
-        <Button variant="outline" size="sm" onClick={handleExport}>
-          Exportar Excel
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative" ref={colPickerRef}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowColPicker(v => !v)}
+              className="gap-1.5"
+            >
+              <ColumnsSettings className="h-3.5 w-3.5" />
+              Columnas
+            </Button>
+            {showColPicker && (
+              <div className="absolute right-0 top-full mt-1 z-50 min-w-44 rounded-md border bg-popover p-2 shadow-md">
+                {TOGGLEABLE_COLS.map(col => (
+                  <label
+                    key={col.id}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-accent rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={show(col.id)}
+                      onChange={() => toggleCol(col.id)}
+                      className="h-3.5 w-3.5"
+                    />
+                    {col.label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            Exportar Excel
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -275,32 +347,68 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <SortTH col="folio" active={sortCol} dir={sortDir} onSort={handleSort}>Folio</SortTH>
-                <SortTH col="name" active={sortCol} dir={sortDir} onSort={handleSort}>Asistente</SortTH>
-                <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort}>Evento</SortTH>
-                <SortTH col="ticket_type" active={sortCol} dir={sortDir} onSort={handleSort}>Tipo</SortTH>
-                <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right">Monto</SortTH>
-                <th className="px-4 py-3 text-left font-medium">Método</th>
-                <SortTH col="status" active={sortCol} dir={sortDir} onSort={handleSort}>Estado</SortTH>
-                <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort}>Fecha</SortTH>
+                {/* ── Sticky: Folio ── */}
+                <SortTH col="folio" active={sortCol} dir={sortDir} onSort={handleSort}
+                  style={{ ...STICKY_FOLIO, backgroundColor: BG_HEAD }}>
+                  Folio
+                </SortTH>
+                {/* ── Sticky: Nombre ── */}
+                <SortTH col="name" active={sortCol} dir={sortDir} onSort={handleSort}
+                  style={{ ...STICKY_NOMBRE, backgroundColor: BG_HEAD }}>
+                  Nombre
+                </SortTH>
+                {/* ── Sticky: Estado ── */}
+                <th
+                  className="px-4 py-3 text-left font-medium whitespace-nowrap"
+                  style={{ ...STICKY_ESTADO, backgroundColor: BG_HEAD, boxShadow: SHADOW_RIGHT }}
+                >
+                  Estado
+                </th>
+                {show('phone') && (
+                  <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Teléfono</th>
+                )}
+                {show('event') && (
+                  <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap">
+                    Evento
+                  </SortTH>
+                )}
+                {show('ticket_type') && (
+                  <SortTH col="ticket_type" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-normal">
+                    Tipo de<br />acceso
+                  </SortTH>
+                )}
+                {show('amount') && (
+                  <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right whitespace-nowrap">
+                    Monto
+                  </SortTH>
+                )}
+                {show('method') && (
+                  <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Método</th>
+                )}
+                {show('date') && (
+                  <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap">
+                    Fecha
+                  </SortTH>
+                )}
                 {visibleParticipantFields.map(f => (
-                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs whitespace-nowrap">
+                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs whitespace-normal max-w-[120px]">
                     {f.label}
                   </th>
                 ))}
                 {internalFields.length > 0 && (
-                  <th className="px-4 py-3 text-left font-medium text-purple-700">Campos internos</th>
+                  <th className="px-4 py-3 text-left font-medium text-purple-700 whitespace-nowrap">Campos internos</th>
                 )}
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {paged.map(reg => (
-                <RegistrationRow
+                <RegistrationRowItem
                   key={reg.id}
                   reg={reg}
                   participantFields={visibleParticipantFields}
                   internalFields={internalFields.filter(f => (f as { event_id: string }).event_id === (reg as { event_id: string }).event_id)}
+                  hiddenCols={hiddenCols}
                   onStatusChange={handleStatusChange}
                   onInternalSave={handleInternalSave}
                 />
@@ -345,6 +453,7 @@ function SortTH({
   onSort,
   children,
   className = '',
+  style,
 }: {
   col: SortCol
   active: SortCol
@@ -352,10 +461,11 @@ function SortTH({
   onSort: (col: SortCol) => void
   children: React.ReactNode
   className?: string
+  style?: React.CSSProperties
 }) {
   const isActive = active === col
   return (
-    <th className={`px-4 py-3 font-medium ${className}`}>
+    <th className={`px-4 py-3 font-medium ${className}`} style={style}>
       <button
         onClick={() => onSort(col)}
         className="flex items-center gap-1 hover:text-foreground transition-colors"
@@ -371,27 +481,30 @@ function SortTH({
   )
 }
 
-function RegistrationRow({
+function RegistrationRowItem({
   reg,
   participantFields,
   internalFields,
+  hiddenCols,
   onStatusChange,
   onInternalSave,
 }: {
   reg: RegistrationRow
   participantFields: OrgField[]
   internalFields: OrgField[]
+  hiddenCols: Set<string>
   onStatusChange: (id: string, status: string) => Promise<void>
   onInternalSave: (regId: string, attendeeId: string, updates: Record<string, string | boolean>) => void
 }) {
   const [statusPending, startStatus] = useTransition()
   const attendee = (reg.attendees as {
-    id: string; first_name: string; last_name: string; email: string; extra_data: Record<string, unknown> | null
+    id: string; first_name: string; last_name: string; email: string; phone?: string | null; extra_data: Record<string, unknown> | null
   }[])?.[0]
   const ticketType = (reg.tickets as { ticket_types: { name: string; currency: string } | null }[])?.[0]?.ticket_types
   const eventName = (reg.events as { name: string } | null)?.name
   const s = STATUS_LABELS[reg.status] ?? { label: reg.status, className: 'bg-gray-100 text-gray-600' }
   const hasInternalValues = internalFields.some(f => attendee?.extra_data?.[f.id] != null)
+  const show = (id: string) => !hiddenCols.has(id)
 
   function handleStatus(newStatus: string) {
     startStatus(async () => {
@@ -401,7 +514,11 @@ function RegistrationRow({
 
   return (
     <tr className="hover:bg-muted/30 transition-colors">
-      <td className="px-4 py-3">
+      {/* ── Sticky: Folio ── */}
+      <td
+        className="px-4 py-3"
+        style={{ ...STICKY_FOLIO, backgroundColor: BG_ROW }}
+      >
         <Link
           href={`/admin/inscritos/${reg.id}`}
           className="font-mono font-medium hover:underline text-xs"
@@ -409,7 +526,11 @@ function RegistrationRow({
           {reg.folio}
         </Link>
       </td>
-      <td className="px-4 py-3">
+      {/* ── Sticky: Nombre ── */}
+      <td
+        className="px-4 py-3"
+        style={{ ...STICKY_NOMBRE, backgroundColor: BG_ROW }}
+      >
         {attendee ? (
           <div>
             <p className="font-medium">{attendee.first_name} {attendee.last_name}</p>
@@ -419,15 +540,11 @@ function RegistrationRow({
           <span className="text-muted-foreground">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-muted-foreground text-xs">{eventName ?? '—'}</td>
-      <td className="px-4 py-3 text-muted-foreground text-xs">{ticketType?.name ?? '—'}</td>
-      <td className="px-4 py-3 text-right font-medium text-xs">
-        {formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}
-      </td>
-      <td className="px-4 py-3 text-muted-foreground text-xs">
-        {reg.payment_method ? METHOD_LABELS[reg.payment_method] ?? reg.payment_method : '—'}
-      </td>
-      <td className="px-4 py-3">
+      {/* ── Sticky: Estado ── */}
+      <td
+        className="px-4 py-3"
+        style={{ ...STICKY_ESTADO, backgroundColor: BG_ROW, boxShadow: SHADOW_RIGHT }}
+      >
         <select
           value={reg.status}
           onChange={e => handleStatus(e.target.value)}
@@ -440,7 +557,30 @@ function RegistrationRow({
           <option value="cancelled">Cancelado</option>
         </select>
       </td>
-      <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>
+      {show('phone') && (
+        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+          {attendee?.phone ?? '—'}
+        </td>
+      )}
+      {show('event') && (
+        <td className="px-4 py-3 text-muted-foreground text-xs">{eventName ?? '—'}</td>
+      )}
+      {show('ticket_type') && (
+        <td className="px-4 py-3 text-muted-foreground text-xs">{ticketType?.name ?? '—'}</td>
+      )}
+      {show('amount') && (
+        <td className="px-4 py-3 text-right font-medium text-xs">
+          {formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}
+        </td>
+      )}
+      {show('method') && (
+        <td className="px-4 py-3 text-muted-foreground text-xs">
+          {reg.payment_method ? METHOD_LABELS[reg.payment_method] ?? reg.payment_method : '—'}
+        </td>
+      )}
+      {show('date') && (
+        <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>
+      )}
       {participantFields.map(f => {
         const extra = (attendee?.extra_data as Record<string, unknown>) ?? {}
         const v = extra[f.id]

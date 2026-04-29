@@ -114,18 +114,26 @@ export interface ComprobanteData {
   currency: string
   folio: string
   registrationDate: string
+  docType?: 'comprobante' | 'prereg'
 }
 
 function ComprobanteDocument({ data }: { data: ComprobanteData }) {
   const formattedAmount = `$${data.amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${data.currency}`
+  const isPrereg = data.docType === 'prereg'
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.orgName}>{data.orgName}</Text>
-          <Text style={styles.title}>Comprobante de Inscripción</Text>
-          <Text style={styles.subtitle}>Documento no fiscal — solo para fines de registro</Text>
+          <Text style={styles.title}>
+            {isPrereg ? 'Confirmación de Pre-registro' : 'Comprobante de Inscripción'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {isPrereg
+              ? 'Este documento confirma tu lugar reservado. No es comprobante de pago.'
+              : 'Documento no fiscal — solo para fines de registro'}
+          </Text>
         </View>
 
         <View style={styles.section}>

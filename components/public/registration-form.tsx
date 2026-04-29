@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import PhoneInput from 'react-phone-number-input'
-import type { E164Number } from 'libphonenumber-js/core'
+import type { E164Number, CountryCode } from 'libphonenumber-js/core'
 import 'react-phone-number-input/style.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { createRegistration } from '@/lib/actions/registration'
 import { COUNTRIES_ES } from '@/lib/data/countries-es'
+import { COUNTRY_NAME_TO_ISO } from '@/lib/data/country-codes'
 import type { Event, TicketType, EventField } from '@/types/database'
 
 type Step = 1 | 2 | 3 | 4
@@ -44,6 +45,8 @@ export function RegistrationForm({
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState<E164Number | undefined>(undefined)
+  const [phoneCountry, setPhoneCountry] = useState<CountryCode>('MX')
+  const [confirmEmail, setConfirmEmail] = useState('')
   const [extraData, setExtraData] = useState<Record<string, string | boolean>>({})
   const [selectedTypeId, setSelectedTypeId] = useState(preselectedTypeId ?? '')
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>(
@@ -82,6 +85,7 @@ export function RegistrationForm({
     if (!firstName.trim() || firstName.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres.'
     if (!lastName.trim() || lastName.trim().length < 2) return 'El apellido debe tener al menos 2 caracteres.'
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Email inválido.'
+    if (email.trim().toLowerCase() !== confirmEmail.trim().toLowerCase()) return 'Los correos no coinciden.'
     if (!phone) return 'El teléfono es obligatorio.'
     const phoneDigits = String(phone).replace(/\D/g, '')
     if (phoneDigits.length < 8) return 'El teléfono debe tener al menos 8 dígitos.'
@@ -196,12 +200,24 @@ export function RegistrationForm({
             />
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="confirmEmail">Confirmar correo electrónico</Label>
+            <Input
+              id="confirmEmail"
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              placeholder=""
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="phone">Teléfono</Label>
             <PhoneInput
               id="phone"
-              defaultCountry="MX"
+              country={phoneCountry}
+              onCountryChange={(c) => setPhoneCountry(c ?? 'MX')}
               value={phone}
               onChange={setPhone}
+              numberInputProps={{ maxLength: 15 }}
             />
           </div>
 
@@ -212,7 +228,13 @@ export function RegistrationForm({
                   key={field.id}
                   field={field}
                   value={extraData[field.id]}
-                  onChange={(val) => setExtraData((prev) => ({ ...prev, [field.id]: val }))}
+                  onChange={(val) => {
+                    setExtraData((prev) => ({ ...prev, [field.id]: val }))
+                    if (field.field_type === 'country' && typeof val === 'string' && val) {
+                      const iso = COUNTRY_NAME_TO_ISO[val]
+                      if (iso) setPhoneCountry(iso as CountryCode)
+                    }
+                  }}
                 />
               ))}
             </div>

@@ -132,6 +132,7 @@ export async function sendConfirmationEmail(params: ConfirmationEmailParams): Pr
     currency: params.currency,
     folio: params.folio,
     registrationDate: params.registrationDate,
+    docType: params.paymentMethod === 'preregister' ? 'prereg' : 'comprobante',
   }
 
   // Only attach PDF if not requesting invoice (invoice flow uses text instructions instead)
