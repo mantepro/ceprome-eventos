@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Calendar, CreditCard, Users } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, Users, ScanLine } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/admin/eventos', label: 'Eventos', icon: Calendar, exact: false },
   { href: '/admin/inscritos', label: 'Inscritos', icon: Users, exact: false },
   { href: '/admin/pagos', label: 'Pagos', icon: CreditCard, exact: false },
+  { href: '/admin/acceso', label: 'Acceso', icon: ScanLine, exact: false },
 ]
 
 export function Sidebar() {

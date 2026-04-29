@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS public.payments (
   organization_id uuid NOT NULL REFERENCES public.organizations(id),
   amount          numeric(10,2) NOT NULL,
   currency        text NOT NULL DEFAULT 'USD',
-  method          text NOT NULL CHECK (method IN ('paypal','manual')),
+  method          text NOT NULL CHECK (method IN ('paypal','manual','transferencia','deposito','taquilla','otro')),
   status          text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','completed','failed','refunded')),
   external_ref    text,
   verified_by     uuid REFERENCES public.users(id),

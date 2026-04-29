@@ -24,6 +24,14 @@ export function formatDateShort(iso: string): string {
   })
 }
 
+export function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Mexico_City',
+  })
+}
+
 export function formatCurrency(amount: number, currency = 'USD'): string {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',

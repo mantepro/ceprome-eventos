@@ -22,7 +22,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { updateRegistrationStatus, updateAttendeeExtraData } from '@/lib/actions/registrations'
-import { formatCurrency, formatDateShort } from '@/lib/utils'
+import { confirmPayment, type PaymentMethod } from '@/lib/actions/payments'
+import { PaymentMethodModal } from '@/components/admin/payment-actions'
+import { formatCurrency, formatDateShort, formatTime } from '@/lib/utils'
+import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import type { RegistrationRow, OrgField } from '@/lib/queries/admin'
 
 type SortCol = 'folio' | 'name' | 'event' | 'ticket_type' | 'amount' | 'status' | 'date'
@@ -35,8 +38,12 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 }
 
 const METHOD_LABELS: Record<string, string> = {
-  manual: 'Transferencia',
-  online: 'PayPal',
+  manual:       'Transferencia / Depósito',
+  transferencia:'Transferencia',
+  deposito:     'Depósito',
+  paypal:       'PayPal',
+  taquilla:     'Taquilla',
+  otro:         'Otro',
 }
 
 const PAGE_SIZE = 25
@@ -48,16 +55,18 @@ const TOGGLEABLE_COLS = [
   { id: 'amount',      label: 'Monto' },
   { id: 'method',      label: 'Método' },
   { id: 'date',        label: 'Fecha' },
+  { id: 'acceso',      label: 'Acceso' },
 ] as const
 
-// Sticky column inline style helpers
+// Zebra row backgrounds
+const ROW_BG = ['#ffffff', '#f9fafb'] as const
+
+// Sticky column constants
 const STICKY_FOLIO  = { position: 'sticky' as const, left: 0,   zIndex: 2, minWidth: 116 }
 const STICKY_NOMBRE = { position: 'sticky' as const, left: 116, zIndex: 2, minWidth: 200 }
 const STICKY_ESTADO = { position: 'sticky' as const, left: 316, zIndex: 2, minWidth: 136 }
-
-const BG_HEAD = 'hsl(var(--muted) / 0.5)'
-const BG_ROW  = 'hsl(var(--background))'
-const SHADOW_RIGHT = '2px 0 4px -1px rgba(0,0,0,0.08)'
+const BG_HEAD       = 'hsl(var(--muted) / 0.5)'
+const SHADOW_RIGHT  = '2px 0 4px -1px rgba(0,0,0,0.08)'
 
 interface Props {
   registrations: RegistrationRow[]
@@ -76,8 +85,11 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const [page, setPage] = useState(1)
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set())
   const [showColPicker, setShowColPicker] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState<string | null>(null)
+  const [confirmLoading, startConfirmLoading] = useTransition()
   const colPickerRef = useRef<HTMLDivElement>(null)
 
+  // Close column picker on outside click
   useEffect(() => {
     if (!showColPicker) return
     function handleClick(e: MouseEvent) {
@@ -89,19 +101,49 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showColPicker])
 
-  const internalFields = useMemo(() => orgFields.filter(f => f.scope === 'internal'), [orgFields])
+  // Realtime: update check-in status when a ticket is scanned
+  useEffect(() => {
+    const supabase = createBrowserClient()
+    const channel = supabase
+      .channel(`tickets-checkin-${orgId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'tickets' },
+        (payload) => {
+          const n = payload.new as {
+            registration_id: string
+            status: 'pending' | 'active' | 'used' | 'cancelled'
+            checked_in_at: string | null
+          }
+          setRegistrations((prev) =>
+            prev.map((r) => {
+              if (r.id !== n.registration_id) return r
+              const tickets = r.tickets.map((t) => ({
+                ...t,
+                status: n.status,
+                checked_in_at: n.checked_in_at,
+              }))
+              return { ...r, tickets }
+            })
+          )
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [orgId])
+
+  const internalFields = useMemo(() => orgFields.filter((f) => f.scope === 'internal'), [orgFields])
 
   const singleEventId = useMemo(() => {
     if (eventFilter !== 'all') return eventFilter
-    const ids = new Set(registrations.map(r => (r as { event_id: string }).event_id).filter(Boolean))
+    const ids = new Set(registrations.map((r) => (r as { event_id: string }).event_id).filter(Boolean))
     return ids.size === 1 ? Array.from(ids)[0] : null
   }, [eventFilter, registrations])
 
-  const visibleParticipantFields = useMemo(() =>
-    singleEventId
-      ? orgFields.filter(f => f.event_id === singleEventId && f.scope === 'participant')
-      : []
-  , [orgFields, singleEventId])
+  const visibleParticipantFields = useMemo(
+    () => (singleEventId ? orgFields.filter((f) => f.event_id === singleEventId && f.scope === 'participant') : []),
+    [orgFields, singleEventId]
+  )
 
   const uniqueEvents = useMemo(() => {
     const map = new Map<string, string>()
@@ -123,10 +165,9 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 
   const filtered = useMemo(() => {
     let result = registrations
-
     if (search.trim()) {
       const q = search.trim().toLowerCase()
-      result = result.filter(r => {
+      result = result.filter((r) => {
         const att = (r.attendees as { first_name: string; last_name: string; email: string }[])?.[0]
         return (
           r.folio.toLowerCase().includes(q) ||
@@ -136,20 +177,16 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
         )
       })
     }
-
-    if (statusFilter !== 'all') result = result.filter(r => r.status === statusFilter)
-
+    if (statusFilter !== 'all') result = result.filter((r) => r.status === statusFilter)
     if (ticketTypeFilter !== 'all') {
-      result = result.filter(r => {
+      result = result.filter((r) => {
         const t = (r.tickets as { ticket_types: { name: string } | null }[])?.[0]?.ticket_types
         return t?.name === ticketTypeFilter
       })
     }
-
     if (eventFilter !== 'all') {
-      result = result.filter(r => (r as { event_id: string }).event_id === eventFilter)
+      result = result.filter((r) => (r as { event_id: string }).event_id === eventFilter)
     }
-
     return result
   }, [registrations, search, statusFilter, ticketTypeFilter, eventFilter])
 
@@ -187,7 +224,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const paged = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   function handleSort(col: SortCol) {
-    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortCol(col); setSortDir('desc') }
     setPage(1)
   }
@@ -195,16 +232,25 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   function resetPage() { setPage(1) }
 
   async function handleStatusChange(regId: string, newStatus: string) {
-    const s = newStatus as 'draft' | 'pending' | 'paid' | 'cancelled'
-    setRegistrations(prev =>
-      prev.map(r => r.id === regId ? { ...r, status: s } : r)
-    )
+    const s = newStatus as 'draft' | 'pending' | 'cancelled'
+    setRegistrations((prev) => prev.map((r) => (r.id === regId ? { ...r, status: s } : r)))
     await updateRegistrationStatus(regId, s)
   }
 
+  function handlePaidWithMethod(method: string) {
+    const regId = pendingConfirm
+    if (!regId) return
+    setPendingConfirm(null)
+    startConfirmLoading(async () => {
+      const result = await confirmPayment(regId, method as PaymentMethod)
+      if (result.error) { alert(result.error); return }
+      setRegistrations((prev) => prev.map((r) => (r.id === regId ? { ...r, status: 'paid' } : r)))
+    })
+  }
+
   function handleInternalSave(regId: string, attendeeId: string, updates: Record<string, string | boolean>) {
-    setRegistrations(prev =>
-      prev.map(r => {
+    setRegistrations((prev) =>
+      prev.map((r) => {
         if (r.id !== regId) return r
         const attendees = r.attendees.map((a, i) => {
           if (i !== 0) return a
@@ -224,7 +270,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   }
 
   function toggleCol(id: string) {
-    setHiddenCols(prev => {
+    setHiddenCols((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
@@ -235,28 +281,31 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 
   return (
     <div className="space-y-4">
+      {/* Payment method modal for table 'paid' dropdown */}
+      <PaymentMethodModal
+        open={pendingConfirm !== null}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={handlePaidWithMethod}
+        isPending={confirmLoading}
+      />
+
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           placeholder="Buscar por folio, nombre o correo…"
           value={search}
-          onChange={e => { setSearch(e.target.value); resetPage() }}
+          onChange={(e) => { setSearch(e.target.value); resetPage() }}
           className="sm:max-w-xs"
         />
         <div className="flex items-center gap-2">
           <div className="relative" ref={colPickerRef}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowColPicker(v => !v)}
-              className="gap-1.5"
-            >
+            <Button variant="outline" size="sm" onClick={() => setShowColPicker((v) => !v)} className="gap-1.5">
               <ColumnsSettings className="h-3.5 w-3.5" />
               Columnas
             </Button>
             {showColPicker && (
               <div className="absolute right-0 top-full mt-1 z-50 min-w-44 rounded-md border bg-popover p-2 shadow-md">
-                {TOGGLEABLE_COLS.map(col => (
+                {TOGGLEABLE_COLS.map((col) => (
                   <label
                     key={col.id}
                     className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-accent rounded"
@@ -281,10 +330,8 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); resetPage() }}>
-          <SelectTrigger className="w-40 h-8 text-xs">
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage() }}>
+          <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
             <SelectItem value="draft">Borrador</SelectItem>
@@ -295,29 +342,21 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
         </Select>
 
         {uniqueTicketTypes.length > 0 && (
-          <Select value={ticketTypeFilter} onValueChange={v => { setTicketTypeFilter(v); resetPage() }}>
-            <SelectTrigger className="w-44 h-8 text-xs">
-              <SelectValue placeholder="Tipo de acceso" />
-            </SelectTrigger>
+          <Select value={ticketTypeFilter} onValueChange={(v) => { setTicketTypeFilter(v); resetPage() }}>
+            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="Tipo de acceso" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los tipos</SelectItem>
-              {uniqueTicketTypes.map(t => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
+              {uniqueTicketTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
 
         {uniqueEvents.length > 1 && (
-          <Select value={eventFilter} onValueChange={v => { setEventFilter(v); resetPage() }}>
-            <SelectTrigger className="w-48 h-8 text-xs">
-              <SelectValue placeholder="Evento" />
-            </SelectTrigger>
+          <Select value={eventFilter} onValueChange={(v) => { setEventFilter(v); resetPage() }}>
+            <SelectTrigger className="w-48 h-8 text-xs"><SelectValue placeholder="Evento" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los eventos</SelectItem>
-              {uniqueEvents.map(e => (
-                <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-              ))}
+              {uniqueEvents.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
@@ -345,7 +384,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
       ) : (
         <div className="rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
+            <thead className="text-muted-foreground">
               <tr>
                 {/* ── Sticky: Folio ── */}
                 <SortTH col="folio" active={sortCol} dir={sortDir} onSort={handleSort}
@@ -364,52 +403,37 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 >
                   Estado
                 </th>
-                {show('phone') && (
-                  <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Teléfono</th>
-                )}
-                {show('event') && (
-                  <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap">
-                    Evento
-                  </SortTH>
-                )}
-                {show('ticket_type') && (
-                  <SortTH col="ticket_type" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-normal">
-                    Tipo de<br />acceso
-                  </SortTH>
-                )}
-                {show('amount') && (
-                  <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right whitespace-nowrap">
-                    Monto
-                  </SortTH>
-                )}
-                {show('method') && (
-                  <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Método</th>
-                )}
-                {show('date') && (
-                  <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap">
-                    Fecha
-                  </SortTH>
-                )}
-                {visibleParticipantFields.map(f => (
-                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs whitespace-normal max-w-[120px]">
+                {show('phone')       && <th className="px-4 py-3 text-left font-medium whitespace-nowrap bg-muted/50">Teléfono</th>}
+                {show('event')       && <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap bg-muted/50">Evento</SortTH>}
+                {show('ticket_type') && <SortTH col="ticket_type" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-normal bg-muted/50">Tipo de<br />acceso</SortTH>}
+                {show('amount')      && <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right whitespace-nowrap bg-muted/50">Monto</SortTH>}
+                {show('method')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap bg-muted/50">Método</th>}
+                {show('date')        && <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap bg-muted/50">Fecha</SortTH>}
+                {show('acceso')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap bg-muted/50">Acceso</th>}
+                {visibleParticipantFields.map((f) => (
+                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs whitespace-normal max-w-[120px] bg-muted/50">
                     {f.label}
                   </th>
                 ))}
                 {internalFields.length > 0 && (
-                  <th className="px-4 py-3 text-left font-medium text-purple-700 whitespace-nowrap">Campos internos</th>
+                  <th className="px-4 py-3 text-left font-medium text-purple-700 whitespace-nowrap bg-muted/50">Campos internos</th>
                 )}
-                <th className="px-4 py-3"></th>
+                <th className="px-4 py-3 bg-muted/50"></th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {paged.map(reg => (
+              {paged.map((reg, idx) => (
                 <RegistrationRowItem
                   key={reg.id}
                   reg={reg}
+                  rowIndex={idx}
                   participantFields={visibleParticipantFields}
-                  internalFields={internalFields.filter(f => (f as { event_id: string }).event_id === (reg as { event_id: string }).event_id)}
+                  internalFields={internalFields.filter(
+                    (f) => (f as { event_id: string }).event_id === (reg as { event_id: string }).event_id
+                  )}
                   hiddenCols={hiddenCols}
                   onStatusChange={handleStatusChange}
+                  onRequestPaidConfirm={(regId) => setPendingConfirm(regId)}
                   onInternalSave={handleInternalSave}
                 />
               ))}
@@ -418,26 +442,13 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
+          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
             Anterior
           </Button>
-          <span className="text-sm text-muted-foreground">
-            Página {page} de {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-          >
+          <span className="text-sm text-muted-foreground">Página {page} de {totalPages}</span>
+          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
             Siguiente
           </Button>
         </div>
@@ -447,107 +458,84 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 }
 
 function SortTH({
-  col,
-  active,
-  dir,
-  onSort,
-  children,
-  className = '',
-  style,
+  col, active, dir, onSort, children, className = '', style,
 }: {
-  col: SortCol
-  active: SortCol
-  dir: 'asc' | 'desc'
+  col: SortCol; active: SortCol; dir: 'asc' | 'desc'
   onSort: (col: SortCol) => void
-  children: React.ReactNode
-  className?: string
-  style?: React.CSSProperties
+  children: React.ReactNode; className?: string; style?: React.CSSProperties
 }) {
-  const isActive = active === col
   return (
     <th className={`px-4 py-3 font-medium ${className}`} style={style}>
-      <button
-        onClick={() => onSort(col)}
-        className="flex items-center gap-1 hover:text-foreground transition-colors"
-      >
+      <button onClick={() => onSort(col)} className="flex items-center gap-1 hover:text-foreground transition-colors">
         {children}
-        {isActive ? (
-          dir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-        ) : (
-          <ChevronsUpDown className="h-3 w-3 opacity-30" />
-        )}
+        {active === col
+          ? dir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+          : <ChevronsUpDown className="h-3 w-3 opacity-30" />}
       </button>
     </th>
   )
 }
 
 function RegistrationRowItem({
-  reg,
-  participantFields,
-  internalFields,
-  hiddenCols,
-  onStatusChange,
-  onInternalSave,
+  reg, rowIndex, participantFields, internalFields, hiddenCols,
+  onStatusChange, onRequestPaidConfirm, onInternalSave,
 }: {
   reg: RegistrationRow
+  rowIndex: number
   participantFields: OrgField[]
   internalFields: OrgField[]
   hiddenCols: Set<string>
   onStatusChange: (id: string, status: string) => Promise<void>
+  onRequestPaidConfirm: (regId: string) => void
   onInternalSave: (regId: string, attendeeId: string, updates: Record<string, string | boolean>) => void
 }) {
   const [statusPending, startStatus] = useTransition()
   const attendee = (reg.attendees as {
-    id: string; first_name: string; last_name: string; email: string; phone?: string | null; extra_data: Record<string, unknown> | null
+    id: string; first_name: string; last_name: string; email: string; phone?: string | null
+    extra_data: Record<string, unknown> | null
   }[])?.[0]
-  const ticketType = (reg.tickets as { ticket_types: { name: string; currency: string } | null }[])?.[0]?.ticket_types
+  const ticket = (reg.tickets as {
+    status: string; checked_in_at: string | null
+    ticket_types: { name: string; currency: string } | null
+  }[])?.[0]
+  const ticketType = ticket?.ticket_types
   const eventName = (reg.events as { name: string } | null)?.name
   const s = STATUS_LABELS[reg.status] ?? { label: reg.status, className: 'bg-gray-100 text-gray-600' }
-  const hasInternalValues = internalFields.some(f => attendee?.extra_data?.[f.id] != null)
+  const hasInternalValues = internalFields.some((f) => attendee?.extra_data?.[f.id] != null)
   const show = (id: string) => !hiddenCols.has(id)
 
+  const rowBg = ROW_BG[rowIndex % 2]
+
   function handleStatus(newStatus: string) {
-    startStatus(async () => {
-      await onStatusChange(reg.id, newStatus)
-    })
+    if (newStatus === 'paid') {
+      onRequestPaidConfirm(reg.id)
+      return
+    }
+    startStatus(async () => { await onStatusChange(reg.id, newStatus) })
   }
 
   return (
-    <tr className="hover:bg-muted/30 transition-colors">
+    <tr className="transition-colors hover:bg-muted/30" style={{ backgroundColor: rowBg }}>
       {/* ── Sticky: Folio ── */}
-      <td
-        className="px-4 py-3"
-        style={{ ...STICKY_FOLIO, backgroundColor: BG_ROW }}
-      >
-        <Link
-          href={`/admin/inscritos/${reg.id}`}
-          className="font-mono font-medium hover:underline text-xs"
-        >
+      <td className="px-4 py-3" style={{ ...STICKY_FOLIO, backgroundColor: rowBg }}>
+        <Link href={`/admin/inscritos/${reg.id}`} className="font-mono font-medium hover:underline text-xs">
           {reg.folio}
         </Link>
       </td>
       {/* ── Sticky: Nombre ── */}
-      <td
-        className="px-4 py-3"
-        style={{ ...STICKY_NOMBRE, backgroundColor: BG_ROW }}
-      >
+      <td className="px-4 py-3" style={{ ...STICKY_NOMBRE, backgroundColor: rowBg }}>
         {attendee ? (
           <div>
             <p className="font-medium">{attendee.first_name} {attendee.last_name}</p>
             <p className="text-muted-foreground text-xs">{attendee.email}</p>
           </div>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
+        ) : <span className="text-muted-foreground">—</span>}
       </td>
       {/* ── Sticky: Estado ── */}
-      <td
-        className="px-4 py-3"
-        style={{ ...STICKY_ESTADO, backgroundColor: BG_ROW, boxShadow: SHADOW_RIGHT }}
-      >
+      <td className="px-4 py-3" style={{ ...STICKY_ESTADO, backgroundColor: rowBg, boxShadow: SHADOW_RIGHT }}>
         <select
           value={reg.status}
-          onChange={e => handleStatus(e.target.value)}
+          onChange={(e) => handleStatus(e.target.value)}
           disabled={statusPending}
           className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer focus:ring-1 focus:ring-ring ${s.className}`}
         >
@@ -557,39 +545,26 @@ function RegistrationRowItem({
           <option value="cancelled">Cancelado</option>
         </select>
       </td>
-      {show('phone') && (
-        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
-          {attendee?.phone ?? '—'}
+      {show('phone')       && <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{attendee?.phone ?? '—'}</td>}
+      {show('event')       && <td className="px-4 py-3 text-muted-foreground text-xs">{eventName ?? '—'}</td>}
+      {show('ticket_type') && <td className="px-4 py-3 text-muted-foreground text-xs">{ticketType?.name ?? '—'}</td>}
+      {show('amount')      && <td className="px-4 py-3 text-right font-medium text-xs">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</td>}
+      {show('method')      && <td className="px-4 py-3 text-muted-foreground text-xs">{reg.payment_method ? (METHOD_LABELS[reg.payment_method] ?? reg.payment_method) : '—'}</td>}
+      {show('date')        && <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>}
+      {show('acceso')      && (
+        <td className="px-4 py-3 text-xs">
+          {ticket?.status === 'used' && ticket.checked_in_at
+            ? <span className="text-green-700 font-medium">✓ {formatTime(ticket.checked_in_at)}</span>
+            : <span className="text-muted-foreground">—</span>}
         </td>
       )}
-      {show('event') && (
-        <td className="px-4 py-3 text-muted-foreground text-xs">{eventName ?? '—'}</td>
-      )}
-      {show('ticket_type') && (
-        <td className="px-4 py-3 text-muted-foreground text-xs">{ticketType?.name ?? '—'}</td>
-      )}
-      {show('amount') && (
-        <td className="px-4 py-3 text-right font-medium text-xs">
-          {formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}
-        </td>
-      )}
-      {show('method') && (
-        <td className="px-4 py-3 text-muted-foreground text-xs">
-          {reg.payment_method ? METHOD_LABELS[reg.payment_method] ?? reg.payment_method : '—'}
-        </td>
-      )}
-      {show('date') && (
-        <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>
-      )}
-      {participantFields.map(f => {
+      {participantFields.map((f) => {
         const extra = (attendee?.extra_data as Record<string, unknown>) ?? {}
         const v = extra[f.id]
         const display = v === true ? 'Sí' : v === false ? 'No' : v != null ? String(v) : '—'
         return (
           <td key={f.id} className="px-4 py-3 text-xs max-w-[140px]">
-            <span className="block truncate" title={display !== '—' ? display : undefined}>
-              {display}
-            </span>
+            <span className="block truncate" title={display !== '—' ? display : undefined}>{display}</span>
           </td>
         )
       })}
@@ -607,23 +582,14 @@ function RegistrationRowItem({
         </td>
       )}
       <td className="px-4 py-3 text-right">
-        <Link
-          href={`/admin/inscritos/${reg.id}`}
-          className="text-xs text-primary hover:underline"
-        >
-          Ver
-        </Link>
+        <Link href={`/admin/inscritos/${reg.id}`} className="text-xs text-primary hover:underline">Ver</Link>
       </td>
     </tr>
   )
 }
 
 function InternalFieldsDialog({
-  reg,
-  attendee,
-  fields,
-  hasValues,
-  onSave,
+  reg, attendee, fields, hasValues, onSave,
 }: {
   reg: RegistrationRow
   attendee: { id: string; first_name: string; last_name: string; extra_data: Record<string, unknown> | null }
@@ -669,61 +635,38 @@ function InternalFieldsDialog({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Campos internos</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              {attendee.first_name} {attendee.last_name}
-            </p>
+            <p className="text-sm text-muted-foreground">{attendee.first_name} {attendee.last_name}</p>
           </DialogHeader>
-
           <div className="space-y-3 py-2">
-            {fields.map(f => (
+            {fields.map((f) => (
               <div key={f.id} className="space-y-1">
                 <Label className="text-xs">{f.label}</Label>
                 {f.field_type === 'textarea' ? (
-                  <Textarea
-                    value={(values[f.id] as string) ?? ''}
-                    onChange={e => setValues(v => ({ ...v, [f.id]: e.target.value }))}
-                    rows={2}
-                  />
+                  <Textarea value={(values[f.id] as string) ?? ''} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} rows={2} />
                 ) : f.field_type === 'checkbox' ? (
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={(values[f.id] as boolean) ?? false}
-                      onChange={e => setValues(v => ({ ...v, [f.id]: e.target.checked }))}
-                      className="h-4 w-4 rounded"
-                    />
+                    <input type="checkbox" checked={(values[f.id] as boolean) ?? false} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.checked }))} className="h-4 w-4 rounded" />
                     {f.label}
                   </label>
                 ) : f.field_type === 'select' ? (
-                  <select
-                    value={(values[f.id] as string) ?? ''}
-                    onChange={e => setValues(v => ({ ...v, [f.id]: e.target.value }))}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                  >
+                  <select value={(values[f.id] as string) ?? ''} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
                     <option value="">Selecciona…</option>
-                    {(f.options ?? []).map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
+                    {(f.options ?? []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 ) : (
                   <Input
                     type={f.field_type === 'number' ? 'number' : f.field_type === 'date' ? 'date' : 'text'}
                     value={(values[f.id] as string) ?? ''}
-                    onChange={e => setValues(v => ({ ...v, [f.id]: e.target.value }))}
+                    onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
                   />
                 )}
               </div>
             ))}
             {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
-
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={isPending}>
-              {isPending ? 'Guardando…' : 'Guardar'}
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleSave} disabled={isPending}>{isPending ? 'Guardando…' : 'Guardar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

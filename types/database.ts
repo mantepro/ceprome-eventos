@@ -289,7 +289,7 @@ export interface Database {
           organization_id: string
           amount: number
           currency: string
-          method: 'paypal' | 'manual'
+          method: 'paypal' | 'manual' | 'transferencia' | 'deposito' | 'taquilla' | 'otro'
           status: 'pending' | 'completed' | 'failed' | 'refunded'
           external_ref: string | null
           verified_by: string | null
@@ -302,7 +302,7 @@ export interface Database {
           organization_id: string
           amount: number
           currency?: string
-          method: 'paypal' | 'manual'
+          method: 'paypal' | 'manual' | 'transferencia' | 'deposito' | 'taquilla' | 'otro'
           status?: 'pending' | 'completed' | 'failed' | 'refunded'
           external_ref?: string | null
           verified_by?: string | null

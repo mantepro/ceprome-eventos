@@ -5,7 +5,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserProfile } from '@/lib/queries/admin'
 import { generateAndSendTicket } from '@/lib/actions/generate-ticket'
 
-export async function confirmPayment(registrationId: string): Promise<{ error?: string }> {
+export type PaymentMethod = 'paypal' | 'manual' | 'transferencia' | 'deposito' | 'taquilla' | 'otro'
+
+export async function confirmPayment(
+  registrationId: string,
+  method: PaymentMethod = 'manual'
+): Promise<{ error?: string }> {
   const profile = await getCurrentUserProfile()
   if (!profile) return { error: 'No autorizado.' }
 
@@ -34,6 +39,7 @@ export async function confirmPayment(registrationId: string): Promise<{ error?: 
       .from('payments')
       .update({
         status: 'completed',
+        method,
         verified_by: profile.id,
         verified_at: new Date().toISOString(),
       })
@@ -48,7 +54,6 @@ export async function confirmPayment(registrationId: string): Promise<{ error?: 
       .maybeSingle()
 
     if (!completedPayment) {
-      // Pre-registro or admin manual confirm without prior payment entry — create one
       const { data: ticketRow } = await supabase
         .from('tickets')
         .select('ticket_types(currency)')
@@ -62,7 +67,7 @@ export async function confirmPayment(registrationId: string): Promise<{ error?: 
         organization_id: profile.organization_id,
         amount: reg.total_amount,
         currency,
-        method: 'manual',
+        method,
         status: 'completed',
         verified_by: profile.id,
         verified_at: new Date().toISOString(),
@@ -92,7 +97,7 @@ export async function confirmPayment(registrationId: string): Promise<{ error?: 
   return {}
 }
 
-export async function validatePayment(paymentId: string): Promise<{ error?: string }> {
+export async function validatePayment(paymentId: string, method: PaymentMethod = 'manual'): Promise<{ error?: string }> {
   const profile = await getCurrentUserProfile()
   if (!profile) return { error: 'No autorizado.' }
 
@@ -107,7 +112,7 @@ export async function validatePayment(paymentId: string): Promise<{ error?: stri
   if (!payment) return { error: 'Pago no encontrado.' }
   if (payment.status !== 'pending') return { error: 'Este pago ya fue procesado.' }
 
-  return confirmPayment(payment.registration_id)
+  return confirmPayment(payment.registration_id, method)
 }
 
 export async function rejectPayment(paymentId: string): Promise<{ error?: string }> {
