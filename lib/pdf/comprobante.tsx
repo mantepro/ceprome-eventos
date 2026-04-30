@@ -206,7 +206,7 @@ function ComprobanteDocument({ data }: { data: ComprobanteData }) {
           <Text style={styles.folioValue}>{data.folio}</Text>
         </View>
 
-        {data.invoiceInstructions ? (
+        {data.docType !== 'prereg' && data.invoiceInstructions ? (
           <View style={styles.invoiceSection}>
             <Text style={styles.invoiceSectionLabel}>Para solicitar factura fiscal</Text>
             <Text style={styles.invoiceSectionBody}>{data.invoiceInstructions}</Text>

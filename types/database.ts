@@ -116,6 +116,49 @@ export interface Database {
           }
         ]
       }
+      coupons: {
+        Row: {
+          id: string
+          organization_id: string
+          event_id: string | null
+          code: string
+          type: 'percentage' | 'fixed'
+          value: number
+          max_uses: number | null
+          used_count: number
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          event_id?: string | null
+          code: string
+          type: 'percentage' | 'fixed'
+          value: number
+          max_uses?: number | null
+          used_count?: number
+          active?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['coupons']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'coupons_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'coupons_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       registrations: {
         Row: {
           id: string
@@ -125,6 +168,8 @@ export interface Database {
           status: 'draft' | 'pending' | 'paid' | 'cancelled'
           payment_method: 'online' | 'manual' | null
           total_amount: number
+          discount_amount: number
+          coupon_id: string | null
           notes: string | null
           created_at: string
         }
@@ -136,6 +181,8 @@ export interface Database {
           status?: 'draft' | 'pending' | 'paid' | 'cancelled'
           payment_method?: 'online' | 'manual' | null
           total_amount?: number
+          discount_amount?: number
+          coupon_id?: string | null
           notes?: string | null
           created_at?: string
         }
@@ -443,6 +490,7 @@ export interface Database {
 
 // Tipos derivados convenientes
 export type Organization = Database['public']['Tables']['organizations']['Row']
+export type Coupon = Database['public']['Tables']['coupons']['Row']
 export type Event = Database['public']['Tables']['events']['Row']
 export type TicketType = Database['public']['Tables']['ticket_types']['Row']
 export type KitDeliveryStation = Database['public']['Tables']['kit_delivery_stations']['Row']

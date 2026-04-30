@@ -139,6 +139,14 @@ export default async function PagarPage({
             </p>
           </div>
         )}
+        {reg.discount_amount > 0 && (
+          <div className="px-4 py-3 flex items-center justify-between text-green-700">
+            <span>Descuento aplicado</span>
+            <span className="font-medium">
+              -{formatCurrency(reg.discount_amount, ticket?.ticket_types?.currency ?? 'USD')}
+            </span>
+          </div>
+        )}
         <div className="px-4 py-3 flex items-center justify-between font-bold">
           <span>Total</span>
           <span className="text-base">

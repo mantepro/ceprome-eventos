@@ -229,3 +229,15 @@ export const getOrgFields = cache(async (orgId: string) => {
 })
 
 export type OrgField = Awaited<ReturnType<typeof getOrgFields>>[number]
+
+export const getCoupons = cache(async (orgId: string) => {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('coupons')
+    .select('id, code, type, value, max_uses, used_count, active, event_id, created_at, events(name)')
+    .eq('organization_id', orgId)
+    .order('created_at', { ascending: false })
+  return data ?? []
+})
+
+export type CouponRow = Awaited<ReturnType<typeof getCoupons>>[number]

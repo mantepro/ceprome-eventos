@@ -3,7 +3,9 @@
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendConfirmationEmail } from '@/lib/email/confirmation'
+import { validateCoupon } from '@/lib/actions/coupons'
 import { formatDate } from '@/lib/utils'
 
 const schema = z.object({
@@ -20,6 +22,7 @@ const schema = z.object({
   ),
   paymentMethod: z.enum(['online', 'manual', 'preregister']),
   extraData: z.record(z.string(), z.union([z.string(), z.boolean()])).optional(),
+  couponCode: z.string().optional(),
 })
 
 export type CreateRegistrationInput = z.infer<typeof schema>
@@ -38,7 +41,7 @@ export async function createRegistration(
 
   const {
     orgSlug, orgId, eventId, ticketTypeId,
-    firstName, lastName, email, phone, paymentMethod, extraData,
+    firstName, lastName, email, phone, paymentMethod, extraData, couponCode,
   } = parsed.data
 
   const supabase = await createClient()
@@ -61,6 +64,18 @@ export async function createRegistration(
     return { error: 'Este tipo de inscripción ya no tiene lugares disponibles.' }
   }
 
+  // Validate coupon server-side
+  let couponId: string | null = null
+  let discountAmount = 0
+  if (couponCode?.trim()) {
+    const couponResult = await validateCoupon(couponCode.trim(), orgId, eventId, ticketType.price)
+    if (!couponResult.valid) return { error: `Cupón inválido: ${couponResult.error}` }
+    couponId = couponResult.couponId
+    discountAmount = couponResult.discountAmount
+  }
+
+  const finalAmount = Math.max(0, ticketType.price - discountAmount)
+
   const isPreregister = paymentMethod === 'preregister'
   const folio = generateFolio()
   const registrationId = crypto.randomUUID()
@@ -75,7 +90,9 @@ export async function createRegistration(
       folio,
       status: isPreregister ? 'draft' : 'pending',
       payment_method: isPreregister ? null : paymentMethod,
-      total_amount: ticketType.price,
+      total_amount: finalAmount,
+      discount_amount: discountAmount,
+      coupon_id: couponId,
     })
 
   if (regError) {
@@ -121,7 +138,7 @@ export async function createRegistration(
     const { error: paymentError } = await supabase.from('payments').insert({
       registration_id: registrationId,
       organization_id: orgId,
-      amount: ticketType.price,
+      amount: finalAmount,
       currency: ticketType.currency,
       method: paymentMethod === 'online' ? 'paypal' : 'manual',
       status: 'pending',
@@ -130,6 +147,22 @@ export async function createRegistration(
     if (paymentError) {
       console.error('[createRegistration] payments INSERT failed:', JSON.stringify(paymentError, null, 2))
       return { error: 'Error al registrar el pago.' }
+    }
+  }
+
+  // Increment coupon used_count
+  if (couponId) {
+    const adminSupa = createAdminClient()
+    const { data: couponRow } = await adminSupa
+      .from('coupons')
+      .select('used_count')
+      .eq('id', couponId)
+      .single()
+    if (couponRow) {
+      await adminSupa
+        .from('coupons')
+        .update({ used_count: couponRow.used_count + 1 })
+        .eq('id', couponId)
     }
   }
 
@@ -157,7 +190,7 @@ export async function createRegistration(
         eventDate: formatDate(eventData.starts_at),
         eventLocation: eventData.location,
         ticketType: ticketType.name,
-        amount: ticketType.price,
+        amount: finalAmount,
         currency: ticketType.currency,
         orgName: orgData.name,
         orgEmail: orgData.email,

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { createRegistration } from '@/lib/actions/registration'
+import { validateCoupon, type CouponValidationResult } from '@/lib/actions/coupons'
 import { COUNTRIES_ES } from '@/lib/data/countries-es'
 import { COUNTRY_NAME_TO_ISO } from '@/lib/data/country-codes'
 import type { Event, TicketType, EventField } from '@/types/database'
@@ -52,6 +53,10 @@ export function RegistrationForm({
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>(
     preselectedPayment ?? ''
   )
+  const [couponCode, setCouponCode] = useState('')
+  const [couponResult, setCouponResult] = useState<CouponValidationResult | null>(null)
+  const [couponError, setCouponError] = useState('')
+  const [couponPending, startCouponTransition] = useTransition()
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
@@ -102,6 +107,27 @@ export function RegistrationForm({
     return null
   }
 
+  function handleSelectType(id: string) {
+    setSelectedTypeId(id)
+    setCouponResult(null)
+    setCouponError('')
+    setCouponCode('')
+  }
+
+  function handleApplyCoupon() {
+    if (!selectedTypeId || !selectedType) return
+    setCouponError('')
+    setCouponResult(null)
+    startCouponTransition(async () => {
+      const result = await validateCoupon(couponCode, orgId, event.id, selectedType.price)
+      if (!result.valid) {
+        setCouponError(result.error)
+      } else {
+        setCouponResult(result)
+      }
+    })
+  }
+
   function handleNext() {
     setError('')
     if (step === 1) {
@@ -142,6 +168,7 @@ export function RegistrationForm({
         phone: String(phone ?? ''),
         paymentMethod: isPreregFlow ? 'preregister' : (paymentMethod as 'online' | 'manual'),
         extraData: Object.keys(extraData).length > 0 ? extraData : undefined,
+        couponCode: couponResult?.valid ? couponCode.trim() : undefined,
       })
       if (result?.error) setError(result.error)
     })
@@ -258,7 +285,7 @@ export function RegistrationForm({
                 key={tt.id}
                 type="button"
                 disabled={isSoldOut}
-                onClick={() => !isSoldOut && setSelectedTypeId(tt.id)}
+                onClick={() => !isSoldOut && handleSelectType(tt.id)}
                 className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
                   isSelected
                     ? 'border-primary bg-primary/5'
@@ -280,6 +307,46 @@ export function RegistrationForm({
               </button>
             )
           })}
+
+          {selectedTypeId && (
+            <div className="pt-3 border-t space-y-2">
+              <p className="text-sm text-muted-foreground">¿Tienes un código de descuento?</p>
+              <div className="flex gap-2">
+                <Input
+                  value={couponCode}
+                  onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponResult(null); setCouponError('') }}
+                  placeholder="Ej. EARLY2027"
+                  className="font-mono uppercase"
+                  maxLength={32}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleApplyCoupon}
+                  disabled={couponPending || !couponCode.trim()}
+                >
+                  {couponPending ? '…' : 'Aplicar'}
+                </Button>
+              </div>
+              {couponError && (
+                <p className="text-xs text-destructive">{couponError}</p>
+              )}
+              {couponResult?.valid && (
+                <div className="rounded-md bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-800">
+                  <p className="font-medium">
+                    Descuento aplicado:{' '}
+                    {couponResult.type === 'percentage'
+                      ? `${couponResult.value}%`
+                      : `$${couponResult.value.toLocaleString()}`}
+                  </p>
+                  <p className="text-xs mt-0.5">
+                    Precio final: <strong>${couponResult.finalAmount.toLocaleString()}</strong>{' '}
+                    {selectedType?.currency}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -336,9 +403,23 @@ export function RegistrationForm({
             <div className="px-4 py-3">
               <p className="text-xs text-muted-foreground mb-1">Inscripción</p>
               <p className="font-medium">{selectedType.name}</p>
-              <p className="font-bold">
-                ${selectedType.price.toLocaleString()} {selectedType.currency}
-              </p>
+              {couponResult?.valid ? (
+                <div>
+                  <p className="text-sm text-muted-foreground line-through">
+                    ${selectedType.price.toLocaleString()} {selectedType.currency}
+                  </p>
+                  <p className="font-bold text-green-700">
+                    ${couponResult.finalAmount.toLocaleString()} {selectedType.currency}
+                    <span className="text-xs font-normal text-green-600 ml-1">
+                      (cupón {couponResult.type === 'percentage' ? `${couponResult.value}%` : `$${couponResult.value}`} aplicado)
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                <p className="font-bold">
+                  ${selectedType.price.toLocaleString()} {selectedType.currency}
+                </p>
+              )}
             </div>
             {!isPreregFlow && (
               <div className="px-4 py-3">
