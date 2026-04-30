@@ -15,6 +15,7 @@ export interface ConfirmationEmailParams {
   currency: string
   orgName: string
   orgEmail: string | null
+  whatsappContact?: string | null
   paymentMethod: 'online' | 'manual' | 'preregister'
   extraData: Record<string, string | boolean>
   invoiceInstructions: string | null
@@ -22,7 +23,7 @@ export interface ConfirmationEmailParams {
 }
 
 function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean): string {
-  const { folio, attendeeName, eventName, eventDate, eventLocation, ticketType, amount, currency, orgName, orgEmail, paymentMethod, invoiceInstructions } = params
+  const { folio, attendeeName, eventName, eventDate, eventLocation, ticketType, amount, currency, orgName, orgEmail, whatsappContact, paymentMethod, invoiceInstructions } = params
 
   const formattedAmount = `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${currency}`
 
@@ -39,10 +40,10 @@ function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean): 
           <strong>Tu pago está siendo procesado.</strong> Una vez confirmado recibirás tu ticket QR.
          </p>`
 
-  const billingBlock = invoiceRequested && invoiceInstructions
+  const billingBlock = invoiceInstructions
     ? `<div style="margin:24px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
         <div style="background:#f9fafb;padding:8px 16px;border-bottom:1px solid #e5e7eb;">
-          <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Información sobre factura fiscal</p>
+          <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Para solicitar factura fiscal</p>
         </div>
         <div style="padding:16px;white-space:pre-wrap;color:#374151;font-size:14px;">${invoiceInstructions}</div>
       </div>`
@@ -104,6 +105,7 @@ function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean): 
 
         <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
           <p style="margin:0;font-size:12px;color:#9ca3af;">${orgName}${orgEmail ? ` · ${orgEmail}` : ''}</p>
+          ${whatsappContact ? `<p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">WhatsApp de contacto: ${whatsappContact}</p>` : ''}
         </td></tr>
 
       </table>
@@ -133,6 +135,7 @@ export async function sendConfirmationEmail(params: ConfirmationEmailParams): Pr
     folio: params.folio,
     registrationDate: params.registrationDate,
     docType: params.paymentMethod === 'preregister' ? 'prereg' : 'comprobante',
+    invoiceInstructions: params.invoiceInstructions,
   }
 
   // Only attach PDF if not requesting invoice (invoice flow uses text instructions instead)

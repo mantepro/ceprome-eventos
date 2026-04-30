@@ -15,6 +15,7 @@ export type TicketEmailParams = {
   qrUrl: string
   qrBuffer: Buffer
   pdfBuffer?: Buffer
+  whatsappContact?: string | null
 }
 
 export async function sendTicketEmail(params: TicketEmailParams) {
@@ -53,6 +54,7 @@ function buildEmailHtml({
   eventLocation,
   ticketTypeName,
   qrUrl,
+  whatsappContact,
 }: TicketEmailParams): string {
   const dateStr = formatDate(eventStartsAt)
 
@@ -140,6 +142,7 @@ function buildEmailHtml({
               <p style="margin:0;color:#9ca3af;font-size:12px;">
                 CEPROME Latinoamérica · registro.cepromelat.com
               </p>
+              ${whatsappContact ? `<p style="margin:6px 0 0;color:#9ca3af;font-size:12px;">WhatsApp de contacto: ${whatsappContact}</p>` : ''}
             </td>
           </tr>
 

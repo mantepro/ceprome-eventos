@@ -143,7 +143,7 @@ export async function createRegistration(
         .single(),
       supabase
         .from('organizations')
-        .select('name, email')
+        .select('name, email, whatsapp_contact')
         .eq('id', orgId)
         .single(),
     ])
@@ -161,6 +161,7 @@ export async function createRegistration(
         currency: ticketType.currency,
         orgName: orgData.name,
         orgEmail: orgData.email,
+        whatsappContact: orgData.whatsapp_contact,
         paymentMethod,
         extraData: (extraData as Record<string, string | boolean>) ?? {},
         invoiceInstructions: eventData.invoice_instructions,

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { getCurrentUserProfile, getRegistrationById } from '@/lib/queries/admin'
 import { PaymentActions } from '@/components/admin/payment-actions'
+import { ResendTicketButton } from '@/components/admin/resend-ticket-button'
 import { formatCurrency, formatDateShort } from '@/lib/utils'
 
 type Params = Promise<{ id: string }>
@@ -84,6 +85,18 @@ export default async function InscritoDetailPage({ params }: { params: Params })
             Pago manual pendiente de validación
           </p>
           <PaymentActions paymentId={payment.id} />
+        </div>
+      )}
+
+      {reg.status === 'paid' && (
+        <div className="rounded-lg border px-4 py-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Correo de confirmación</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Reenvía el correo con ticket QR y PDF comprobante al asistente.
+            </p>
+          </div>
+          <ResendTicketButton registrationId={reg.id} />
         </div>
       )}
 

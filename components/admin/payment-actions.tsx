@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { validatePayment, rejectPayment, confirmPayment, type PaymentMethod } from '@/lib/actions/payments'
 import { updateRegistrationStatus } from '@/lib/actions/registrations'
+import { sendPaymentInstructions } from '@/lib/actions/send-payment-instructions'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
@@ -112,6 +113,8 @@ export function PreregActions({ registrationId }: { registrationId: string }) {
   const [showModal, setShowModal] = useState(false)
   const [confirming, startConfirm] = useTransition()
   const [cancelling, startCancel] = useTransition()
+  const [sending, startSend] = useTransition()
+  const [sentOk, setSentOk] = useState(false)
 
   function handleConfirm(method: string) {
     setShowModal(false)
@@ -129,6 +132,17 @@ export function PreregActions({ registrationId }: { registrationId: string }) {
     })
   }
 
+  function handleSendInstructions() {
+    setSentOk(false)
+    startSend(async () => {
+      const result = await sendPaymentInstructions(registrationId)
+      if (result.error) alert(result.error)
+      else setSentOk(true)
+    })
+  }
+
+  const busy = confirming || cancelling || sending
+
   return (
     <>
       <PaymentMethodModal
@@ -137,19 +151,32 @@ export function PreregActions({ registrationId }: { registrationId: string }) {
         onConfirm={handleConfirm}
         isPending={confirming}
       />
-      <div className="flex items-center gap-2">
-        <Button size="sm" onClick={() => setShowModal(true)} disabled={confirming || cancelling}>
-          {confirming ? 'Confirmando…' : 'Validar pago'}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleCancel}
-          disabled={confirming || cancelling}
-          className="text-destructive hover:text-destructive"
-        >
-          {cancelling ? 'Cancelando…' : 'Cancelar'}
-        </Button>
+      <div className="flex flex-col items-end gap-1.5">
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setShowModal(true)} disabled={busy}>
+            {confirming ? 'Confirmando…' : 'Validar pago'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSendInstructions}
+            disabled={busy}
+          >
+            {sending ? 'Enviando…' : 'Enviar instrucciones'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={busy}
+            className="text-destructive hover:text-destructive"
+          >
+            {cancelling ? 'Cancelando…' : 'Cancelar'}
+          </Button>
+        </div>
+        {sentOk && (
+          <p className="text-xs text-green-700">Instrucciones enviadas correctamente.</p>
+        )}
       </div>
     </>
   )

@@ -127,6 +127,18 @@ export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Pr
         </div>
       </div>
 
+      <Field label="Instrucciones de transferencia bancaria (opcional)">
+        <Textarea
+          name="transfer_instructions"
+          defaultValue={defaultValues?.transfer_instructions ?? ''}
+          placeholder={`Banco: BBVA\nCuenta: 1234 5678 9012\nCLABE: 012 345 678 901 234 56\nBeneficiario: CEPROME A.C.\n\nEnvía tu comprobante a tesoreria@ceprome.org con tu folio.`}
+          rows={5}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Se incluirá en el correo de instrucciones de pago a pre-registrados y en la página pública de pago.
+        </p>
+      </Field>
+
       <Field label="Instrucciones de factura fiscal (opcional)">
         <Textarea
           name="invoice_instructions"
@@ -135,7 +147,7 @@ export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Pr
           rows={4}
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Si hay texto aquí, se incluirá en el correo de los participantes que marquen &quot;Sí, requiero factura fiscal&quot;. Déjalo vacío si el evento no maneja facturas.
+          Se incluirá al pie del comprobante PDF y en el correo de confirmación de todos los participantes.
         </p>
       </Field>
 

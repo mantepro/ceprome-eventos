@@ -74,15 +74,23 @@ export async function generateAndSendTicket(registrationId: string): Promise<voi
     .update({ qr_url: publicUrl })
     .eq('id', ticket.id)
 
+  // Fetch org + event extras needed for PDF and email
+  const [{ data: org }, { data: eventExtra }] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('name, whatsapp_contact')
+      .eq('id', ticket.organization_id)
+      .single(),
+    supabase
+      .from('events')
+      .select('invoice_instructions')
+      .eq('id', ticket.event_id)
+      .single(),
+  ])
+
   // Generar PDF comprobante
   let pdfBuffer: Buffer | undefined
   try {
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('name')
-      .eq('id', ticket.organization_id)
-      .single()
-
     const comprobanteData: ComprobanteData = {
       orgName: org?.name ?? 'Organización',
       eventName: event.name,
@@ -95,6 +103,7 @@ export async function generateAndSendTicket(registrationId: string): Promise<voi
       currency: ticketType?.currency ?? 'USD',
       folio: reg.folio,
       registrationDate: formatDate(reg.created_at),
+      invoiceInstructions: eventExtra?.invoice_instructions ?? null,
     }
     pdfBuffer = await renderComprobante(comprobanteData)
   } catch (err) {
@@ -115,6 +124,7 @@ export async function generateAndSendTicket(registrationId: string): Promise<voi
       qrUrl: publicUrl,
       qrBuffer,
       pdfBuffer,
+      whatsappContact: org?.whatsapp_contact ?? null,
     })
   } catch (err) {
     console.error('[generateAndSendTicket] error enviando correo:', err)

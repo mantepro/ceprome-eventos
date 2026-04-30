@@ -100,6 +100,24 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
+  invoiceSection: {
+    marginTop: 24,
+    padding: 12,
+    border: '1px solid #ddd',
+  },
+  invoiceSectionLabel: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#555',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  invoiceSectionBody: {
+    fontSize: 9,
+    color: '#333',
+    lineHeight: 1.5,
+  },
 })
 
 export interface ComprobanteData {
@@ -115,6 +133,7 @@ export interface ComprobanteData {
   folio: string
   registrationDate: string
   docType?: 'comprobante' | 'prereg'
+  invoiceInstructions?: string | null
 }
 
 function ComprobanteDocument({ data }: { data: ComprobanteData }) {
@@ -187,9 +206,16 @@ function ComprobanteDocument({ data }: { data: ComprobanteData }) {
           <Text style={styles.folioValue}>{data.folio}</Text>
         </View>
 
+        {data.invoiceInstructions ? (
+          <View style={styles.invoiceSection}>
+            <Text style={styles.invoiceSectionLabel}>Para solicitar factura fiscal</Text>
+            <Text style={styles.invoiceSectionBody}>{data.invoiceInstructions}</Text>
+          </View>
+        ) : null}
+
         <Text style={styles.footer}>{data.orgName} · Generado el {data.registrationDate}</Text>
         <Text style={styles.disclaimer}>
-          Este comprobante no tiene valor fiscal. Para solicitar factura, consulta al organizador del evento.
+          Este comprobante no tiene valor fiscal.
         </Text>
       </Page>
     </Document>

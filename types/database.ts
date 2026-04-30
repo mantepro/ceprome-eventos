@@ -11,6 +11,7 @@ export interface Database {
           email: string | null
           phone: string | null
           logo_url: string | null
+          whatsapp_contact: string | null
           active: boolean
           created_at: string
         }
@@ -21,6 +22,7 @@ export interface Database {
           email?: string | null
           phone?: string | null
           logo_url?: string | null
+          whatsapp_contact?: string | null
           active?: boolean
           created_at?: string
         }
@@ -41,6 +43,7 @@ export interface Database {
           cover_url: string | null
           allow_preregistration: boolean
           invoice_instructions: string | null
+          transfer_instructions: string | null
           created_at: string
         }
         Insert: {
@@ -56,6 +59,7 @@ export interface Database {
           cover_url?: string | null
           allow_preregistration?: boolean
           invoice_instructions?: string | null
+          transfer_instructions?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['events']['Insert']>

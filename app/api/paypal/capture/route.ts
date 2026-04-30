@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { capturePayPalOrder } from '@/lib/paypal'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { generateAndSendTicket } from '@/lib/actions/generate-ticket'
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = req.nextUrl
@@ -55,6 +56,10 @@ export async function GET(req: NextRequest) {
         .update({ status: 'active' })
         .eq('registration_id', payment.registration_id),
     ])
+
+    generateAndSendTicket(payment.registration_id).catch((err) =>
+      console.error('[paypal/capture] generateAndSendTicket:', err)
+    )
 
     return NextResponse.redirect(`${origin}/${slug}/confirmar/${folio}?pago=ok`)
   } catch {
