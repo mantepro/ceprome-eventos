@@ -618,18 +618,30 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Total inscritos',    value: stats.total,   sub: null,                               color: '' },
-          { label: 'Pagados',            value: stats.paid,    sub: `${stats.paidPct}% del total`,       color: 'text-green-700' },
-          { label: 'Con check-in',       value: stats.checkin, sub: null,                               color: 'text-blue-700' },
-          { label: 'Pendientes de pago', value: stats.pending, sub: null,                               color: stats.pending > 0 ? 'text-amber-700' : 'text-muted-foreground' },
-        ].map((card) => (
-          <div key={card.label} className="rounded-lg border bg-card p-3">
-            <p className="text-xs text-muted-foreground">{card.label}</p>
-            <p className={`text-2xl font-bold mt-0.5 ${card.color}`}>{card.value}</p>
-            {card.sub && <p className="text-xs text-muted-foreground mt-0.5">{card.sub}</p>}
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Total inscritos</p>
+          <p className="text-2xl font-bold mt-0.5">{stats.total}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Pagados</p>
+          <p className="text-2xl font-bold mt-0.5 text-green-700">{stats.paid}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{stats.paidPct}% del total</p>
+        </div>
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Asistencia</p>
+          <div className="flex items-baseline gap-3 mt-0.5">
+            <span className="text-2xl font-bold text-blue-700">{stats.checkin}</span>
+            <span className="text-xs text-muted-foreground">✅ presentes</span>
           </div>
-        ))}
+          <div className="flex items-baseline gap-3 mt-0.5">
+            <span className="text-lg font-semibold text-muted-foreground">{stats.total - stats.checkin}</span>
+            <span className="text-xs text-muted-foreground">🚪 por llegar</span>
+          </div>
+        </div>
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Pendientes de pago</p>
+          <p className={`text-2xl font-bold mt-0.5 ${stats.pending > 0 ? 'text-amber-700' : 'text-muted-foreground'}`}>{stats.pending}</p>
+        </div>
       </div>
 
       {paged.length === 0 ? (
