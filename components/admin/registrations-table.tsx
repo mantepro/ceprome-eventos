@@ -420,9 +420,11 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 {show('date')        && <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Fecha</SortTH>}
                 {show('acceso')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Acceso</th>}
                 {visibleParticipantFields.map((f) => (
-                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs max-w-[120px]"
-                    style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: '#f9fafb', whiteSpace: 'nowrap' }}>
-                    {f.label}
+                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs"
+                    style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: '#f9fafb' }}>
+                    <div style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.label}>
+                      {f.label}
+                    </div>
                   </th>
                 ))}
                 {internalFields.length > 0 && (
@@ -576,8 +578,8 @@ function RegistrationRowItem({
         const v = extra[f.id]
         const display = v === true ? 'Sí' : v === false ? 'No' : v != null ? String(v) : '—'
         return (
-          <td key={f.id} className="px-4 py-3 text-xs max-w-[140px]" style={{ backgroundColor: rowBg }}>
-            <span className="block truncate" title={display !== '—' ? display : undefined}>{display}</span>
+          <td key={f.id} className="px-4 py-3 text-xs" style={{ backgroundColor: rowBg }}>
+            <span style={{ display: 'block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={display !== '—' ? display : undefined}>{display}</span>
           </td>
         )
       })}
