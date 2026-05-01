@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { getCurrentUserProfile } from '@/lib/queries/admin'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Scanner } from '@/components/scan/scanner'
@@ -9,7 +9,7 @@ export default async function ScanEventPage({ params }: { params: Params }) {
   const { 'event-id': eventId } = await params
 
   const profile = await getCurrentUserProfile()
-  if (!profile) return null
+  if (!profile) redirect('/auth/login')
 
   const supabase = createAdminClient()
   const { data: event } = await supabase

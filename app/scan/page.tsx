@@ -24,6 +24,8 @@ export default async function ScanPage() {
 
   const events = await getPublishedEvents(profile.organization_id)
 
+  if (events.length === 1) redirect(`/scan/${events[0].id}`)
+
   return (
     <main className="min-h-screen bg-background">
       <header className="border-b px-5 h-14 flex items-center justify-between">
