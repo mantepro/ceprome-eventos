@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,10 +31,10 @@ import type { RegistrationRow, OrgField } from '@/lib/queries/admin'
 type SortCol = 'folio' | 'name' | 'event' | 'ticket_type' | 'amount' | 'status' | 'date'
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  pending:   { label: 'Pendiente',  className: 'bg-amber-100 text-amber-800' },
-  paid:      { label: 'Pagado',     className: 'bg-green-100 text-green-800' },
-  cancelled: { label: 'Cancelado',  className: 'bg-red-100 text-red-800' },
-  draft:     { label: 'Borrador',   className: 'bg-gray-100 text-gray-600' },
+  pending:   { label: 'Pendiente',  className: 'bg-amber-400 text-amber-950' },
+  paid:      { label: 'Pagado',     className: 'bg-green-600 text-white' },
+  cancelled: { label: 'Cancelado',  className: 'bg-red-600 text-white' },
+  draft:     { label: 'Borrador',   className: 'bg-gray-400 text-white' },
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -283,6 +283,17 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     })
   }, [filtered, sortCol, sortDir])
 
+  const stats = useMemo(() => {
+    const total = sorted.length
+    const paid = sorted.filter(r => r.status === 'paid').length
+    const checkin = sorted.filter(r => {
+      const t = (r.tickets as { status: string }[])?.[0]
+      return t?.status === 'used'
+    }).length
+    const pending = sorted.filter(r => r.status === 'pending').length
+    return { total, paid, checkin, pending, paidPct: total > 0 ? Math.round((paid / total) * 100) : 0 }
+  }, [sorted])
+
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const paged = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
@@ -474,10 +485,20 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
         )}
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        {sorted.length} resultado{sorted.length !== 1 ? 's' : ''}
-        {sorted.length !== registrations.length && ` de ${registrations.length} total`}
-      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total inscritos',    value: stats.total,   sub: null,                               color: '' },
+          { label: 'Pagados',            value: stats.paid,    sub: `${stats.paidPct}% del total`,       color: 'text-green-700' },
+          { label: 'Con check-in',       value: stats.checkin, sub: null,                               color: 'text-blue-700' },
+          { label: 'Pendientes de pago', value: stats.pending, sub: null,                               color: stats.pending > 0 ? 'text-amber-700' : 'text-muted-foreground' },
+        ].map((card) => (
+          <div key={card.label} className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">{card.label}</p>
+            <p className={`text-2xl font-bold mt-0.5 ${card.color}`}>{card.value}</p>
+            {card.sub && <p className="text-xs text-muted-foreground mt-0.5">{card.sub}</p>}
+          </div>
+        ))}
+      </div>
 
       {paged.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
@@ -625,7 +646,7 @@ function RegistrationRowItem({
     <tr className="transition-colors hover:bg-muted/30" style={{ backgroundColor: rowBg }}>
       {/* ── Sticky: Folio ── */}
       <td className="px-4 py-3" style={{ ...STICKY_FOLIO, backgroundColor: rowBg }}>
-        <Link href={`/admin/inscritos/${reg.id}`} className="font-mono font-medium hover:underline text-xs">
+        <Link href={`/admin/inscritos/${reg.id}`} className="font-mono text-xs text-muted-foreground hover:underline hover:text-foreground transition-colors">
           {reg.folio}
         </Link>
       </td>
@@ -633,7 +654,7 @@ function RegistrationRowItem({
       <td className="px-4 py-3" style={{ ...STICKY_NOMBRE, backgroundColor: rowBg }}>
         {attendee ? (
           <div>
-            <p className="font-medium">{attendee.first_name} {attendee.last_name}</p>
+            <p className="font-semibold">{attendee.first_name} {attendee.last_name}</p>
             <p className="text-muted-foreground text-xs">{attendee.email}</p>
           </div>
         ) : <span className="text-muted-foreground">—</span>}
@@ -697,8 +718,14 @@ function RegistrationRowItem({
           )}
         </td>
       )}
-      <td className="px-4 py-3 text-right" style={{ ...TD_VER, backgroundColor: rowBg }}>
-        <Link href={`/admin/inscritos/${reg.id}`} className="text-xs text-primary hover:underline">Ver</Link>
+      <td className="px-4 py-3" style={{ ...TD_VER, backgroundColor: rowBg }}>
+        <Link
+          href={`/admin/inscritos/${reg.id}`}
+          className="inline-flex items-center gap-1 text-xs border rounded px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          Ver
+        </Link>
       </td>
     </tr>
   )
