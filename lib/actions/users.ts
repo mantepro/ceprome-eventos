@@ -31,22 +31,30 @@ export async function inviteUser(
 
   if (existing) return { error: 'Este correo ya está registrado en la organización.', success: false }
 
-  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
-    email.trim().toLowerCase()
-  )
+  const normalizedEmail = email.trim().toLowerCase()
+  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(normalizedEmail)
+
+  let authUserId: string
+
   if (inviteError) {
     const msg = inviteError.message ?? ''
-    if (msg.toLowerCase().includes('already')) {
-      return { error: 'Este correo ya tiene una cuenta en el sistema.', success: false }
+    if (!msg.toLowerCase().includes('already')) {
+      return { error: `Error al enviar invitación: ${msg}`, success: false }
     }
-    return { error: `Error al enviar invitación: ${msg}`, success: false }
+    // Email already has an auth account — find it and link to this org without re-inviting
+    const { data: listData } = await admin.auth.admin.listUsers()
+    const authUser = listData?.users?.find((u) => u.email?.toLowerCase() === normalizedEmail)
+    if (!authUser) return { error: 'No se pudo vincular la cuenta. Intenta de nuevo.', success: false }
+    authUserId = authUser.id
+  } else {
+    authUserId = inviteData.user.id
   }
 
   const { error: insertError } = await admin.from('users').insert({
-    id: inviteData.user.id,
+    id: authUserId,
     organization_id: orgId,
     role,
-    email: email.trim().toLowerCase(),
+    email: normalizedEmail,
     active: true,
   })
 
