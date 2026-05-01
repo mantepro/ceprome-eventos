@@ -96,7 +96,7 @@ export const getRegistrations = cache(async (orgId: string) => {
       id, folio, status, payment_method, total_amount, created_at, event_id,
       events(id, name),
       attendees(id, first_name, last_name, email, phone, extra_data),
-      tickets(status, checked_in_at, ticket_types(name, currency))
+      tickets(id, status, checked_in_at, ticket_types(name, currency))
     `)
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })

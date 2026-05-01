@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, Eye } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,9 +23,17 @@ import {
 } from '@/components/ui/select'
 import { updateRegistrationStatus, updateAttendeeExtraData } from '@/lib/actions/registrations'
 import { confirmPayment, type PaymentMethod } from '@/lib/actions/payments'
+import { checkInTicket, revertCheckIn } from '@/lib/actions/checkin'
 import { PaymentMethodModal } from '@/components/admin/payment-actions'
 import { formatCurrency, formatDateShort, formatTime } from '@/lib/utils'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import type { RegistrationRow, OrgField } from '@/lib/queries/admin'
 
 type SortCol = 'folio' | 'name' | 'event' | 'ticket_type' | 'amount' | 'status' | 'date'
@@ -60,7 +68,7 @@ const PAGE_SIZE = 25
 // Columns order matches table rendering order
 const TOGGLEABLE_COLS = [
   { id: 'ticket_type', label: 'Tipo de acceso' },
-  { id: 'acceso',      label: 'Acceso' },
+  { id: 'acceso',      label: 'Check-in' },
   { id: 'date',        label: 'Fecha' },
   { id: 'pais',        label: 'País' },
   { id: 'amount',      label: 'Monto' },
@@ -73,18 +81,20 @@ const TOGGLEABLE_COLS = [
 const ROW_BG = ['#ffffff', '#f9fafb'] as const
 
 // Sticky column constants — body rows (horizontal only)
-const STICKY_FOLIO  = { position: 'sticky' as const, left: 0,   zIndex: 2, minWidth: 116 }
-const STICKY_NOMBRE = { position: 'sticky' as const, left: 116, zIndex: 2, minWidth: 200 }
-const STICKY_PAGO   = { position: 'sticky' as const, left: 316, zIndex: 2, minWidth: 160 }
+const STICKY_FOLIO   = { position: 'sticky' as const, left: 0,   zIndex: 2, minWidth: 116 }
+const STICKY_NOMBRE  = { position: 'sticky' as const, left: 116, zIndex: 2, minWidth: 200 }
+const STICKY_CHECKIN = { position: 'sticky' as const, left: 316, zIndex: 2, minWidth: 160 }
+const STICKY_PAGO    = { position: 'sticky' as const, left: 476, zIndex: 2, minWidth: 160 }
 // Header cells: doubly sticky (vertical top:0 + horizontal left:X) with solid opaque background
 const BG_HEAD      = '#f9fafb'
 const SHADOW_RIGHT = '2px 0 4px -1px rgba(0,0,0,0.08)'
 const SHADOW_LEFT  = '-2px 0 4px -1px rgba(0,0,0,0.08)'
 const TH_BASE      = { position: 'sticky' as const, top: 0, zIndex: 3,  backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
-const TH_FOLIO     = { ...STICKY_FOLIO,  top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
-const TH_NOMBRE    = { ...STICKY_NOMBRE, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
-const TH_PAGO      = { ...STICKY_PAGO,   top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const, boxShadow: SHADOW_RIGHT }
-// Sticky-right "Ver" column
+const TH_FOLIO     = { ...STICKY_FOLIO,   top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_NOMBRE    = { ...STICKY_NOMBRE,  top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_CHECKIN   = { ...STICKY_CHECKIN, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_PAGO      = { ...STICKY_PAGO,    top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const, boxShadow: SHADOW_RIGHT }
+// Sticky-right action column
 const TH_VER = { position: 'sticky' as const, right: 0, top: 0, zIndex: 12, backgroundColor: BG_HEAD, boxShadow: SHADOW_LEFT }
 const TD_VER = { position: 'sticky' as const, right: 0, zIndex: 2, boxShadow: SHADOW_LEFT }
 
@@ -336,6 +346,36 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     )
   }
 
+  async function handleCheckIn(regId: string, ticketId: string) {
+    const now = new Date().toISOString()
+    setRegistrations((prev) => prev.map((r) => {
+      if (r.id !== regId) return r
+      return { ...r, tickets: r.tickets.map((t, i) => i === 0 ? { ...t, status: 'used', checked_in_at: now } : t) }
+    }))
+    const result = await checkInTicket(ticketId)
+    if (result.error) {
+      setRegistrations((prev) => prev.map((r) => {
+        if (r.id !== regId) return r
+        return { ...r, tickets: r.tickets.map((t, i) => i === 0 ? { ...t, status: 'active', checked_in_at: null } : t) }
+      }))
+      toast.error('Error al registrar check-in')
+      return
+    }
+    toast.success('Check-in registrado', {
+      action: { label: 'Deshacer', onClick: () => handleRevertCheckIn(regId, ticketId) },
+    })
+  }
+
+  async function handleRevertCheckIn(regId: string, ticketId: string) {
+    setRegistrations((prev) => prev.map((r) => {
+      if (r.id !== regId) return r
+      return { ...r, tickets: r.tickets.map((t, i) => i === 0 ? { ...t, status: 'active', checked_in_at: null } : t) }
+    }))
+    const result = await revertCheckIn(ticketId)
+    if (result.error) toast.error('Error al revertir check-in')
+    else toast.success('Check-in revertido')
+  }
+
   function handleExport() {
     const params = new URLSearchParams()
     if (eventFilter !== 'all') params.set('eventId', eventFilter)
@@ -518,12 +558,13 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 <SortTH col="name" active={sortCol} dir={sortDir} onSort={handleSort} style={TH_NOMBRE}>
                   Nombre
                 </SortTH>
+                {/* ── Sticky: Check-in ── */}
+                {show('acceso') && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_CHECKIN}>Check-in</th>}
                 {/* ── Sticky: Pago (Estado + Monto + Método unificados) ── */}
                 <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_PAGO}>
                   Pago
                 </th>
                 {show('ticket_type') && <SortTH col="ticket_type" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Tipo</SortTH>}
-                {show('acceso')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Acceso</th>}
                 {show('date')        && <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Fecha</SortTH>}
                 {show('pais') && countryField && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>País</th>}
                 {show('amount')      && <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right whitespace-nowrap" style={TH_BASE}>Monto</SortTH>}
@@ -562,6 +603,8 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                   onStatusChange={handleStatusChange}
                   onRequestPaidConfirm={(regId) => setPendingConfirm(regId)}
                   onInternalSave={handleInternalSave}
+                  onCheckIn={handleCheckIn}
+                  onRevertCheckIn={handleRevertCheckIn}
                 />
               ))}
             </tbody>
@@ -605,7 +648,7 @@ function SortTH({
 
 function RegistrationRowItem({
   reg, rowIndex, participantFields, internalFields, hiddenCols, countryFieldId,
-  onStatusChange, onRequestPaidConfirm, onInternalSave,
+  onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn,
 }: {
   reg: RegistrationRow
   rowIndex: number
@@ -616,6 +659,8 @@ function RegistrationRowItem({
   onStatusChange: (id: string, status: string) => Promise<void>
   onRequestPaidConfirm: (regId: string) => void
   onInternalSave: (regId: string, attendeeId: string, updates: Record<string, string | boolean>) => void
+  onCheckIn: (regId: string, ticketId: string) => void
+  onRevertCheckIn: (regId: string, ticketId: string) => void
 }) {
   const [statusPending, startStatus] = useTransition()
   const attendee = (reg.attendees as {
@@ -623,16 +668,20 @@ function RegistrationRowItem({
     extra_data: Record<string, unknown> | null
   }[])?.[0]
   const ticket = (reg.tickets as {
-    status: string; checked_in_at: string | null
+    id: string; status: string; checked_in_at: string | null
     ticket_types: { name: string; currency: string } | null
   }[])?.[0]
   const ticketType = ticket?.ticket_types
   const eventName = (reg.events as { name: string } | null)?.name
-  const s = STATUS_LABELS[reg.status] ?? { label: reg.status, className: 'bg-gray-100 text-gray-600' }
+  const s = STATUS_LABELS[reg.status] ?? { label: reg.status, className: 'bg-gray-400 text-white' }
   const hasInternalValues = internalFields.some((f) => attendee?.extra_data?.[f.id] != null)
   const show = (id: string) => !hiddenCols.has(id)
 
-  const rowBg = ROW_BG[rowIndex % 2]
+  const rowBg = ticket?.status === 'used'
+    ? '#f0fdf4'
+    : reg.status === 'pending'
+    ? '#fffbeb'
+    : ROW_BG[rowIndex % 2]
 
   function handleStatus(newStatus: string) {
     if (newStatus === 'paid') {
@@ -643,7 +692,7 @@ function RegistrationRowItem({
   }
 
   return (
-    <tr className="transition-colors hover:bg-muted/30" style={{ backgroundColor: rowBg }}>
+    <tr className="transition-colors hover:brightness-95" style={{ backgroundColor: rowBg }}>
       {/* ── Sticky: Folio ── */}
       <td className="px-4 py-3" style={{ ...STICKY_FOLIO, backgroundColor: rowBg }}>
         <Link href={`/admin/inscritos/${reg.id}`} className="font-mono text-xs text-muted-foreground hover:underline hover:text-foreground transition-colors">
@@ -659,6 +708,23 @@ function RegistrationRowItem({
           </div>
         ) : <span className="text-muted-foreground">—</span>}
       </td>
+      {/* ── Sticky: Check-in ── */}
+      {show('acceso') && (
+        <td className="px-4 py-3 text-xs" style={{ ...STICKY_CHECKIN, backgroundColor: rowBg }}>
+          {ticket?.status === 'used' && ticket.checked_in_at ? (
+            <span className="text-green-700 font-medium whitespace-nowrap">✅ {formatTime(ticket.checked_in_at)}</span>
+          ) : ticket?.status === 'active' ? (
+            <button
+              onClick={() => onCheckIn(reg.id, ticket.id)}
+              className="text-xs border border-green-600 text-green-700 rounded px-2 py-1 hover:bg-green-50 transition-colors whitespace-nowrap"
+            >
+              Registrar entrada
+            </button>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </td>
+      )}
       {/* ── Sticky: Pago (estado + monto • método) ── */}
       <td className="px-4 py-3" style={{ ...STICKY_PAGO, backgroundColor: rowBg, boxShadow: SHADOW_RIGHT }}>
         <select
@@ -672,19 +738,12 @@ function RegistrationRowItem({
           <option value="paid">Pagado</option>
           <option value="cancelled">Cancelado</option>
         </select>
-        <p className="text-xs text-muted-foreground mt-0.5 whitespace-nowrap">
-          {formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}
-          {reg.payment_method ? ` • ${METHOD_SHORT[reg.payment_method] ?? reg.payment_method}` : ''}
+        <p className="text-xs mt-0.5 whitespace-nowrap">
+          <span className="font-semibold text-foreground">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</span>
+          {reg.payment_method && <span className="text-muted-foreground"> • {METHOD_SHORT[reg.payment_method] ?? reg.payment_method}</span>}
         </p>
       </td>
       {show('ticket_type') && <td className="px-4 py-3 text-muted-foreground text-xs">{ticketType?.name ?? '—'}</td>}
-      {show('acceso') && (
-        <td className="px-4 py-3 text-xs">
-          {ticket?.status === 'used' && ticket.checked_in_at
-            ? <span className="text-green-700 font-medium">✓ {formatTime(ticket.checked_in_at)}</span>
-            : <span className="text-muted-foreground">—</span>}
-        </td>
-      )}
       {show('date')   && <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>}
       {show('pais') && countryFieldId && (
         <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
@@ -718,14 +777,28 @@ function RegistrationRowItem({
           )}
         </td>
       )}
-      <td className="px-4 py-3" style={{ ...TD_VER, backgroundColor: rowBg }}>
-        <Link
-          href={`/admin/inscritos/${reg.id}`}
-          className="inline-flex items-center gap-1 text-xs border rounded px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-        >
-          <Eye className="h-3.5 w-3.5" />
-          Ver
-        </Link>
+      {/* ── Sticky-right: menú ⋯ ── */}
+      <td className="px-3 py-3" style={{ ...TD_VER, backgroundColor: rowBg }}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1 rounded hover:bg-black/10 transition-colors">
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link href={`/admin/inscritos/${reg.id}`}>Ver detalle</Link>
+            </DropdownMenuItem>
+            {ticket?.status === 'used' && ticket.id && (
+              <DropdownMenuItem
+                onClick={() => onRevertCheckIn(reg.id, ticket.id)}
+                className="text-amber-700 focus:text-amber-700"
+              >
+                Revertir check-in
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </td>
     </tr>
   )
