@@ -32,7 +32,11 @@ export async function inviteUser(
   if (existing) return { error: 'Este correo ya está registrado en la organización.', success: false }
 
   const normalizedEmail = email.trim().toLowerCase()
-  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(normalizedEmail)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+    normalizedEmail,
+    { redirectTo: `${appUrl}/auth/confirm` }
+  )
 
   let authUserId: string
 
