@@ -416,14 +416,19 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 {show('date')        && <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Fecha</SortTH>}
                 {show('acceso')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Acceso</th>}
                 {visibleParticipantFields.map((f) => (
-                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs whitespace-nowrap max-w-[120px]" style={TH_BASE}>
+                  <th key={f.id} className="px-4 py-3 text-left font-medium text-xs max-w-[120px]"
+                    style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: '#f9fafb', whiteSpace: 'nowrap' }}>
                     {f.label}
                   </th>
                 ))}
                 {internalFields.length > 0 && (
-                  <th className="px-4 py-3 text-left font-medium text-purple-700 whitespace-nowrap" style={TH_BASE}>Campos internos</th>
+                  <th className="px-4 py-3 text-left font-medium text-purple-700"
+                    style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: '#f9fafb', whiteSpace: 'nowrap' }}>
+                    Campos internos
+                  </th>
                 )}
-                <th className="px-4 py-3" style={TH_BASE}></th>
+                <th className="px-4 py-3"
+                  style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: '#f9fafb' }}></th>
               </tr>
             </thead>
             <tbody className="divide-y">
