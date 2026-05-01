@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getCurrentUserProfile, getOrgUsers } from '@/lib/queries/admin'
 import { UserInviteModal } from '@/components/admin/user-invite-modal'
 import { UserToggleActive } from '@/components/admin/user-actions'
@@ -21,7 +22,8 @@ const TH = { backgroundColor: '#f9fafb', whiteSpace: 'nowrap' as const }
 
 export default async function UsuariosPage() {
   const profile = await getCurrentUserProfile()
-  if (!profile || profile.role === 'event_staff') return null
+  if (!profile) return null
+  if (profile.role === 'event_staff') redirect('/admin')
 
   const isSuperAdmin = profile.role === 'super_admin'
   const users = await getOrgUsers(profile.organization_id, isSuperAdmin)
