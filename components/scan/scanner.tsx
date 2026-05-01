@@ -234,7 +234,7 @@ function ScanResultOverlay({
           )}
 
           {data.result === 'valid_pending_payment' && (
-            <p className="text-center text-sm font-semibold text-white bg-amber-700/60 rounded-xl px-4 py-2">
+            <p className="text-center text-sm font-semibold text-white bg-blue-800/50 rounded-xl px-4 py-2">
               Pago pendiente — verificar con el asistente
             </p>
           )}
@@ -282,18 +282,18 @@ const resultConfig: Record<ScanResult['result'], ResultConfig> = {
     btnClass: 'bg-white text-green-700 hover:bg-green-50',
   },
   valid_pending_payment: {
-    bg: 'bg-amber-500',
+    bg: 'bg-blue-600',
     icon: '⚠️',
     title: 'ACCESO VÁLIDO ⚠️',
     titleColor: 'text-white',
     cardBg: 'bg-white/20',
     nameColor: 'text-white',
-    subColor: 'text-amber-100',
-    btnClass: 'bg-white text-amber-700 hover:bg-amber-50',
+    subColor: 'text-blue-100',
+    btnClass: 'bg-white text-blue-700 hover:bg-blue-50',
   },
   already_used: {
     bg: 'bg-amber-500',
-    icon: '⚠️',
+    icon: '🔁',
     title: 'YA REGISTRADO',
     titleColor: 'text-white',
     cardBg: 'bg-white/20',
@@ -302,14 +302,14 @@ const resultConfig: Record<ScanResult['result'], ResultConfig> = {
     btnClass: 'bg-white text-amber-700 hover:bg-amber-50',
   },
   pending_payment: {
-    bg: 'bg-orange-600',
-    icon: '💳',
+    bg: 'bg-red-600',
+    icon: '🚫',
     title: 'PAGO PENDIENTE',
     titleColor: 'text-white',
     cardBg: 'bg-white/20',
     nameColor: 'text-white',
-    subColor: 'text-orange-100',
-    btnClass: 'bg-white text-orange-700 hover:bg-orange-50',
+    subColor: 'text-red-100',
+    btnClass: 'bg-white text-red-700 hover:bg-red-50',
   },
   cancelled: {
     bg: 'bg-red-700',
@@ -322,13 +322,13 @@ const resultConfig: Record<ScanResult['result'], ResultConfig> = {
     btnClass: 'bg-white text-red-700 hover:bg-red-50',
   },
   not_found: {
-    bg: 'bg-gray-800',
+    bg: 'bg-red-700',
     icon: '❓',
     title: 'NO ENCONTRADO',
     titleColor: 'text-white',
-    cardBg: 'bg-white/10',
+    cardBg: 'bg-white/20',
     nameColor: 'text-white',
-    subColor: 'text-gray-400',
-    btnClass: 'bg-white text-gray-700 hover:bg-gray-50',
+    subColor: 'text-red-200',
+    btnClass: 'bg-white text-red-700 hover:bg-red-50',
   },
 }
