@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { LogIn } from 'lucide-react'
+import { LogIn, Search, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -151,6 +151,8 @@ export function AccesoPanel({ events, defaultEventId, initialRegistrations, orgI
       .sort((a, b) => b.checkedInAt.localeCompare(a.checkedInAt))
       .slice(0, 10)
   )
+
+  const [flashingRegId, setFlashingRegId] = useState<string | null>(null)
 
   const [pendingCheckinConfirm, setPendingCheckinConfirm] = useState<{
     regId: string; ticketId: string
@@ -332,8 +334,12 @@ export function AccesoPanel({ events, defaultEventId, initialRegistrations, orgI
     playSound('success')
     setSearch('')
     setSearchResults([])
-    setActiveResult(null)
-    refocusInput()
+    setFlashingRegId(regId)
+    setTimeout(() => {
+      setActiveResult(null)
+      setFlashingRegId(null)
+      refocusInput()
+    }, 450)
   }
 
   function handleCheckIn(regId: string, ticketId: string, isPaid: boolean) {
@@ -473,15 +479,15 @@ export function AccesoPanel({ events, defaultEventId, initialRegistrations, orgI
       </div>
 
       {/* ── Search input ── */}
-      <div>
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
         <input
           ref={inputRef}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre, email o folio (REG-XXXX-XXXX)…"
+          placeholder="Buscar por nombre, folio o escanear QR..."
           disabled={loadingRegs || !selectedEventId}
-          className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-          style={{ fontSize: 18 }}
+          className="w-full rounded-lg border-2 border-input bg-background pl-12 pr-4 py-4 text-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
           autoComplete="off"
           spellCheck={false}
         />
@@ -538,6 +544,7 @@ export function AccesoPanel({ events, defaultEventId, initialRegistrations, orgI
       {activeResult && (
         <ResultCard
           reg={activeResult}
+          isFlashing={flashingRegId === activeResult.id}
           onCheckIn={handleCheckIn}
           onCashPayment={(regId, ticketId, amount, currency) => {
             setCashDoPayment(true)
@@ -615,7 +622,8 @@ function StatusBadge({ reg, ticket }: { reg: EventRegistrationRow; ticket: Ticke
     )
   }
   return (
-    <span className="text-xs font-medium bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full whitespace-nowrap">
+    <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-100 text-amber-800 border border-amber-400 px-2 py-0.5 rounded-full whitespace-nowrap">
+      <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
       Pago pendiente
     </span>
   )
@@ -623,11 +631,13 @@ function StatusBadge({ reg, ticket }: { reg: EventRegistrationRow; ticket: Ticke
 
 function ResultCard({
   reg,
+  isFlashing,
   onCheckIn,
   onCashPayment,
   onDismiss,
 }: {
   reg: EventRegistrationRow
+  isFlashing: boolean
   onCheckIn: (regId: string, ticketId: string, isPaid: boolean) => void
   onCashPayment: (regId: string, ticketId: string | null, amount: number, currency: string) => void
   onDismiss: () => void
@@ -640,17 +650,12 @@ function ResultCard({
 
   return (
     <div
-      className="rounded-lg border p-5 space-y-4"
-      style={{
-        backgroundColor: isCheckedIn
-          ? isPaid ? '#f0fdf4' : '#fffbeb'
-          : undefined,
-      }}
+      className={`rounded-lg border p-5 space-y-4 transition-colors duration-300 ${isFlashing ? 'bg-green-100 border-green-400' : isCheckedIn ? (isPaid ? 'bg-[#f0fdf4]' : 'bg-[#fffbeb]') : ''}`}
     >
       {/* Info row */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-lg font-bold">
+          <p className="text-xl font-bold">
             {att ? `${att.first_name} ${att.last_name}` : '—'}
           </p>
           <p className="text-sm text-muted-foreground">{att?.email}</p>
@@ -662,7 +667,7 @@ function ResultCard({
       {/* Ticket type + amount */}
       {ticket?.ticket_types && (
         <p className="text-sm text-muted-foreground">
-          {ticket.ticket_types.name} · <span className="font-medium text-foreground">{formatCurrency(reg.total_amount, currency)}</span>
+          {ticket.ticket_types.name} · <span className="font-semibold text-base text-foreground">{formatCurrency(reg.total_amount, currency)}</span>
         </p>
       )}
 
@@ -695,16 +700,16 @@ function ResultCard({
             {!isPaid && (
               <button
                 onClick={() => onCashPayment(reg.id, ticket?.id ?? null, reg.total_amount, currency)}
-                className="inline-flex items-center gap-1.5 text-sm border border-amber-600 text-amber-700 rounded-lg px-4 py-2.5 hover:bg-amber-50 transition-colors cursor-pointer min-h-[44px]"
+                className="inline-flex items-center gap-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer min-h-[44px]"
               >
-                💵 Pago en efectivo
+                💵 Registrar pago + entrada
               </button>
             )}
           </>
         )}
         <Link
           href={`/admin/inscritos/${reg.id}`}
-          className="inline-flex items-center text-sm border rounded-lg px-4 py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors min-h-[44px]"
+          className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground px-3 py-2.5 transition-colors"
         >
           Ver detalle
         </Link>
