@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { verifyInviteOtp } from '@/lib/actions/auth'
 
 type Stage = 'verifying' | 'set-password' | 'saving' | 'error' | 'invalid'
 
@@ -24,17 +25,14 @@ export function ConfirmInvitePage({ tokenHash, type }: Props) {
       setStage('invalid')
       return
     }
-    const supabase = createClient()
-    supabase.auth
-      .verifyOtp({ token_hash: tokenHash, type: type as 'invite' })
-      .then(({ error }) => {
-        if (error) {
-          setAuthError(error.message)
-          setStage('error')
-        } else {
-          setStage('set-password')
-        }
-      })
+    verifyInviteOtp(tokenHash, type).then(({ error }) => {
+      if (error) {
+        setAuthError(error)
+        setStage('error')
+      } else {
+        setStage('set-password')
+      }
+    })
   }, [tokenHash, type])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
