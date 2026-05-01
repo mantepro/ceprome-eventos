@@ -19,35 +19,59 @@ export interface ConfirmationEmailParams {
   paymentMethod: 'online' | 'manual' | 'preregister'
   extraData: Record<string, string | boolean>
   invoiceInstructions: string | null
+  transferInstructions?: string | null
   registrationDate: string
+  isPaid?: boolean
 }
 
 function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean): string {
-  const { folio, attendeeName, eventName, eventDate, eventLocation, ticketType, amount, currency, orgName, orgEmail, whatsappContact, paymentMethod, invoiceInstructions } = params
+  const { folio, attendeeName, eventName, eventDate, eventLocation, ticketType, amount, currency, orgName, orgEmail, whatsappContact, paymentMethod, invoiceInstructions, transferInstructions, isPaid } = params
 
   const formattedAmount = `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${currency}`
 
+  // ── Corrección 3: mensaje más explícito para pago manual ──
   const paymentNote =
     paymentMethod === 'preregister'
       ? `<p style="color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin:16px 0;">
           <strong>Pre-registro confirmado.</strong> Tu lugar está reservado. Te contactaremos con las instrucciones de pago próximamente.
          </p>`
       : paymentMethod === 'manual'
-      ? `<p style="color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:16px 0;">
-          <strong>Pago pendiente.</strong> Realiza tu transferencia o depósito y envía el comprobante a ${orgEmail ?? 'el correo del organizador'} indicando tu folio <strong>${folio}</strong>.
-         </p>`
+      ? `<div style="color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:16px 0;">
+          <p style="margin:0 0 6px;"><strong>Pago pendiente.</strong></p>
+          <p style="margin:0;font-size:14px;line-height:1.6;">Tu lugar quedará confirmado únicamente cuando verifiquemos tu pago. Te enviaremos tu confirmación y código QR una vez validado.</p>
+         </div>`
       : `<p style="color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px;margin:16px 0;">
           <strong>Tu pago está siendo procesado.</strong> Una vez confirmado recibirás tu ticket QR.
          </p>`
 
-  const billingBlock = invoiceInstructions
+  // ── Corrección 2: instrucciones de transferencia para pagos manuales ──
+  const transferBlock = paymentMethod === 'manual'
+    ? transferInstructions
+      ? `<div style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <div style="background:#f9fafb;padding:8px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Instrucciones de transferencia</p>
+          </div>
+          <div style="padding:16px;white-space:pre-wrap;color:#374151;font-size:14px;line-height:1.6;">${transferInstructions}</div>
+          <div style="padding:0 16px 16px;font-size:13px;color:#374151;">
+            Incluye tu folio <strong style="font-family:monospace;">${folio}</strong> en el concepto del pago
+            y envía tu comprobante a ${orgEmail ?? 'el correo del organizador'}.
+          </div>
+        </div>`
+      : `<p style="font-size:13px;color:#374151;margin:0 0 24px;">
+          Envía tu comprobante de pago a <strong>${orgEmail ?? 'el correo del organizador'}</strong>
+          indicando tu folio <strong style="font-family:monospace;">${folio}</strong>.
+        </p>`
+    : ''
+
+  // ── Corrección 1: sección de factura solo cuando el pago está confirmado ──
+  const billingBlock = isPaid && invoiceInstructions
     ? `<div style="margin:24px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
         <div style="background:#f9fafb;padding:8px 16px;border-bottom:1px solid #e5e7eb;">
           <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Para solicitar factura fiscal</p>
         </div>
         <div style="padding:16px;white-space:pre-wrap;color:#374151;font-size:14px;">${invoiceInstructions}</div>
       </div>`
-    : invoiceRequested
+    : isPaid && invoiceRequested
     ? `<p style="color:#6b7280;font-size:13px;margin:16px 0;">Has indicado que requieres factura fiscal. El organizador del evento se pondrá en contacto contigo.</p>`
     : `<p style="color:#6b7280;font-size:13px;margin:16px 0;">Adjuntamos tu comprobante de inscripción en PDF.</p>`
 
@@ -69,6 +93,8 @@ function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean): 
           <p style="margin:0 0 24px;color:#374151;">Tu inscripción al evento <strong>${eventName}</strong> ha sido registrada.</p>
 
           ${paymentNote}
+
+          ${transferBlock}
 
           <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:24px 0;">
             <div style="background:#f9fafb;padding:8px 16px;border-bottom:1px solid #e5e7eb;">

@@ -171,7 +171,7 @@ export async function createRegistration(
     const [{ data: eventData }, { data: orgData }] = await Promise.all([
       supabase
         .from('events')
-        .select('name, starts_at, location, invoice_instructions')
+        .select('name, starts_at, location, invoice_instructions, transfer_instructions')
         .eq('id', eventId)
         .single(),
       supabase
@@ -198,6 +198,8 @@ export async function createRegistration(
         paymentMethod,
         extraData: (extraData as Record<string, string | boolean>) ?? {},
         invoiceInstructions: eventData.invoice_instructions,
+        transferInstructions: eventData.transfer_instructions,
+        isPaid: false,
         registrationDate: formatDate(new Date().toISOString()),
       })
     }
