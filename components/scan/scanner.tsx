@@ -233,6 +233,12 @@ function ScanResultOverlay({
             </div>
           )}
 
+          {data.result === 'valid_pending_payment' && (
+            <p className="text-center text-sm font-semibold text-white bg-amber-700/60 rounded-xl px-4 py-2">
+              Pago pendiente — verificar con el asistente
+            </p>
+          )}
+
           {data.result === 'already_used' && data.checked_in_at && (
             <p className={`text-center text-sm ${config.subColor}`}>
               Check-in registrado: {new Date(data.checked_in_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
@@ -274,6 +280,16 @@ const resultConfig: Record<ScanResult['result'], ResultConfig> = {
     nameColor: 'text-white',
     subColor: 'text-green-100',
     btnClass: 'bg-white text-green-700 hover:bg-green-50',
+  },
+  valid_pending_payment: {
+    bg: 'bg-amber-500',
+    icon: '⚠️',
+    title: 'ACCESO VÁLIDO ⚠️',
+    titleColor: 'text-white',
+    cardBg: 'bg-white/20',
+    nameColor: 'text-white',
+    subColor: 'text-amber-100',
+    btnClass: 'bg-white text-amber-700 hover:bg-amber-50',
   },
   already_used: {
     bg: 'bg-amber-500',

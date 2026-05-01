@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       id, status, checked_in_at, organization_id, event_id, kit_station_id,
       ticket_types(name),
       attendees(first_name, last_name),
-      registrations(folio)
+      registrations(folio, status)
     `)
     .eq('token', token)
     .single()
@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
   } else if (ticket.status === 'used') {
     result = 'already_used'
   } else if (ticket.status === 'active') {
-    result = 'valid'
+    const regStatus = (ticket.registrations as unknown as { folio: string; status: string } | null)?.status
+    result = regStatus === 'paid' ? 'valid' : 'valid_pending_payment'
     await admin
       .from('tickets')
       .update({ status: 'used', checked_in_at: new Date().toISOString() })
@@ -59,22 +60,23 @@ export async function POST(request: NextRequest) {
     result = 'not_found'
   }
 
-  // Log every scan that has a known ticket
+  // Log every scan that has a known ticket.
+  // valid_pending_payment is stored as 'valid' to satisfy the scan_logs CHECK constraint.
   if (ticket && result !== 'not_found') {
     await admin.from('scan_logs').insert({
       ticket_id: ticket.id,
       organization_id: profile.organization_id,
       event_id,
       scanned_by: user.id,
-      result,
+      result: result === 'valid_pending_payment' ? 'valid' : result,
     })
   }
 
   const response: ScanResult = { result }
 
-  if ((result === 'valid' || result === 'already_used') && ticket) {
+  if ((result === 'valid' || result === 'valid_pending_payment' || result === 'already_used') && ticket) {
     const attendee = ticket.attendees as unknown as { first_name: string; last_name: string } | null
-    const reg = ticket.registrations as unknown as { folio: string } | null
+    const reg = ticket.registrations as unknown as { folio: string; status: string } | null
     const tt = ticket.ticket_types as unknown as { name: string } | null
 
     let kitStation: string | null = null
