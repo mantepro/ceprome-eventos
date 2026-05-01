@@ -38,24 +38,35 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 }
 
 const METHOD_LABELS: Record<string, string> = {
-  manual:       'Transferencia / Depósito',
-  transferencia:'Transferencia',
-  deposito:     'Depósito',
-  paypal:       'PayPal',
-  taquilla:     'Taquilla',
-  otro:         'Otro',
+  manual:        'Transferencia / Depósito',
+  transferencia: 'Transferencia',
+  deposito:      'Depósito',
+  paypal:        'PayPal',
+  taquilla:      'Taquilla',
+  otro:          'Otro',
+}
+
+const METHOD_SHORT: Record<string, string> = {
+  manual:        'Transf./Dep.',
+  transferencia: 'Transf.',
+  deposito:      'Depósito',
+  paypal:        'PayPal',
+  taquilla:      'Taquilla',
+  otro:          'Otro',
 }
 
 const PAGE_SIZE = 25
 
+// Columns order matches table rendering order
 const TOGGLEABLE_COLS = [
-  { id: 'phone',       label: 'Teléfono' },
-  { id: 'event',       label: 'Evento' },
   { id: 'ticket_type', label: 'Tipo de acceso' },
+  { id: 'acceso',      label: 'Acceso' },
+  { id: 'date',        label: 'Fecha' },
+  { id: 'pais',        label: 'País' },
   { id: 'amount',      label: 'Monto' },
   { id: 'method',      label: 'Método' },
-  { id: 'date',        label: 'Fecha' },
-  { id: 'acceso',      label: 'Acceso' },
+  { id: 'phone',       label: 'Teléfono' },
+  { id: 'event',       label: 'Evento' },
 ] as const
 
 // Zebra row backgrounds
@@ -64,18 +75,18 @@ const ROW_BG = ['#ffffff', '#f9fafb'] as const
 // Sticky column constants — body rows (horizontal only)
 const STICKY_FOLIO  = { position: 'sticky' as const, left: 0,   zIndex: 2, minWidth: 116 }
 const STICKY_NOMBRE = { position: 'sticky' as const, left: 116, zIndex: 2, minWidth: 200 }
-const STICKY_ESTADO = { position: 'sticky' as const, left: 316, zIndex: 2, minWidth: 136 }
+const STICKY_PAGO   = { position: 'sticky' as const, left: 316, zIndex: 2, minWidth: 160 }
 // Header cells: doubly sticky (vertical top:0 + horizontal left:X) with solid opaque background
-const BG_HEAD       = '#f9fafb'
-const SHADOW_RIGHT  = '2px 0 4px -1px rgba(0,0,0,0.08)'
-const SHADOW_LEFT   = '-2px 0 4px -1px rgba(0,0,0,0.08)'
-const TH_BASE       = { position: 'sticky' as const, top: 0, zIndex: 3,  backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
-const TH_FOLIO      = { ...STICKY_FOLIO,  top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
-const TH_NOMBRE     = { ...STICKY_NOMBRE, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
-const TH_ESTADO     = { ...STICKY_ESTADO, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const, boxShadow: SHADOW_RIGHT }
+const BG_HEAD      = '#f9fafb'
+const SHADOW_RIGHT = '2px 0 4px -1px rgba(0,0,0,0.08)'
+const SHADOW_LEFT  = '-2px 0 4px -1px rgba(0,0,0,0.08)'
+const TH_BASE      = { position: 'sticky' as const, top: 0, zIndex: 3,  backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_FOLIO     = { ...STICKY_FOLIO,  top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_NOMBRE    = { ...STICKY_NOMBRE, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
+const TH_PAGO      = { ...STICKY_PAGO,   top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const, boxShadow: SHADOW_RIGHT }
 // Sticky-right "Ver" column
-const TH_VER        = { position: 'sticky' as const, right: 0, top: 0, zIndex: 12, backgroundColor: BG_HEAD, boxShadow: SHADOW_LEFT }
-const TD_VER        = { position: 'sticky' as const, right: 0, zIndex: 2, boxShadow: SHADOW_LEFT }
+const TH_VER = { position: 'sticky' as const, right: 0, top: 0, zIndex: 12, backgroundColor: BG_HEAD, boxShadow: SHADOW_LEFT }
+const TD_VER = { position: 'sticky' as const, right: 0, zIndex: 2, boxShadow: SHADOW_LEFT }
 
 interface Props {
   registrations: RegistrationRow[]
@@ -89,16 +100,18 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const [statusFilter, setStatusFilter] = useState('all')
   const [ticketTypeFilter, setTicketTypeFilter] = useState('all')
   const [eventFilter, setEventFilter] = useState('all')
+  const [countryFilter, setCountryFilter] = useState('all')
   const [sortCol, setSortCol] = useState<SortCol>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
-  const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set())
+  const [hiddenCols, setHiddenCols] = useState<Set<string>>(
+    new Set(['phone', 'event', 'amount', 'method'])
+  )
   const [showColPicker, setShowColPicker] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null)
   const [confirmLoading, startConfirmLoading] = useTransition()
   const colPickerRef = useRef<HTMLDivElement>(null)
 
-  // Close column picker on outside click
   useEffect(() => {
     if (!showColPicker) return
     function handleClick(e: MouseEvent) {
@@ -143,14 +156,27 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 
   const internalFields = useMemo(() => orgFields.filter((f) => f.scope === 'internal'), [orgFields])
 
+  // Field with field_type 'country' — drives the País column and filter
+  const countryField = useMemo(
+    () => orgFields.find((f) => f.field_type === 'country') ?? null,
+    [orgFields]
+  )
+
   const singleEventId = useMemo(() => {
     if (eventFilter !== 'all') return eventFilter
     const ids = new Set(registrations.map((r) => (r as { event_id: string }).event_id).filter(Boolean))
     return ids.size === 1 ? Array.from(ids)[0] : null
   }, [eventFilter, registrations])
 
+  // Exclude country field from dynamic participant columns — it has its own dedicated column
   const visibleParticipantFields = useMemo(
-    () => (singleEventId ? orgFields.filter((f) => f.event_id === singleEventId && f.scope === 'participant') : []),
+    () => (singleEventId
+      ? orgFields.filter((f) =>
+          f.event_id === singleEventId &&
+          f.scope === 'participant' &&
+          f.field_type !== 'country'
+        )
+      : []),
     [orgFields, singleEventId]
   )
 
@@ -171,6 +197,17 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     }
     return Array.from(set)
   }, [registrations])
+
+  const uniqueCountries = useMemo(() => {
+    if (!countryField) return []
+    const set = new Set<string>()
+    for (const r of registrations) {
+      const att = (r.attendees as { extra_data: Record<string, unknown> | null }[])?.[0]
+      const v = att?.extra_data?.[countryField.id]
+      if (typeof v === 'string' && v.trim()) set.add(v.trim())
+    }
+    return Array.from(set).sort()
+  }, [registrations, countryField])
 
   const filtered = useMemo(() => {
     let result = registrations
@@ -196,8 +233,14 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     if (eventFilter !== 'all') {
       result = result.filter((r) => (r as { event_id: string }).event_id === eventFilter)
     }
+    if (countryFilter !== 'all' && countryField) {
+      result = result.filter((r) => {
+        const att = (r.attendees as { extra_data: Record<string, unknown> | null }[])?.[0]
+        return att?.extra_data?.[countryField.id] === countryFilter
+      })
+    }
     return result
-  }, [registrations, search, statusFilter, ticketTypeFilter, eventFilter])
+  }, [registrations, search, statusFilter, ticketTypeFilter, eventFilter, countryFilter, countryField])
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -288,9 +331,19 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 
   const show = (id: string) => !hiddenCols.has(id)
 
+  const hasActiveFilters = search || statusFilter !== 'all' || ticketTypeFilter !== 'all' || eventFilter !== 'all' || countryFilter !== 'all'
+
+  function clearFilters() {
+    setSearch('')
+    setStatusFilter('all')
+    setTicketTypeFilter('all')
+    setEventFilter('all')
+    setCountryFilter('all')
+    resetPage()
+  }
+
   return (
     <div className="space-y-4">
-      {/* Payment method modal for table 'paid' dropdown */}
       <PaymentMethodModal
         open={pendingConfirm !== null}
         onClose={() => setPendingConfirm(null)}
@@ -370,9 +423,19 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
           </Select>
         )}
 
-        {(search || statusFilter !== 'all' || ticketTypeFilter !== 'all' || eventFilter !== 'all') && (
+        {uniqueCountries.length > 0 && (
+          <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); resetPage() }}>
+            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="País" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los países</SelectItem>
+              {uniqueCountries.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+
+        {hasActiveFilters && (
           <button
-            onClick={() => { setSearch(''); setStatusFilter('all'); setTicketTypeFilter('all'); setEventFilter('all'); resetPage() }}
+            onClick={clearFilters}
             className="text-xs text-muted-foreground hover:text-foreground px-2"
           >
             Limpiar filtros
@@ -393,35 +456,31 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
       ) : (
         <div className="rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-muted-foreground" style={{ backgroundColor: '#f9fafb', position: 'sticky', top: 0, zIndex: 3 }}>
+            <thead className="text-muted-foreground" style={{ backgroundColor: BG_HEAD, position: 'sticky', top: 0, zIndex: 3 }}>
               <tr>
                 {/* ── Sticky: Folio ── */}
-                <SortTH col="folio" active={sortCol} dir={sortDir} onSort={handleSort}
-                  style={TH_FOLIO}>
+                <SortTH col="folio" active={sortCol} dir={sortDir} onSort={handleSort} style={TH_FOLIO}>
                   Folio
                 </SortTH>
                 {/* ── Sticky: Nombre ── */}
-                <SortTH col="name" active={sortCol} dir={sortDir} onSort={handleSort}
-                  style={TH_NOMBRE}>
+                <SortTH col="name" active={sortCol} dir={sortDir} onSort={handleSort} style={TH_NOMBRE}>
                   Nombre
                 </SortTH>
-                {/* ── Sticky: Estado ── */}
-                <th
-                  className="px-4 py-3 text-left font-medium whitespace-nowrap"
-                  style={TH_ESTADO}
-                >
-                  Estado
+                {/* ── Sticky: Pago (Estado + Monto + Método unificados) ── */}
+                <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_PAGO}>
+                  Pago
                 </th>
-                {show('phone')       && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Teléfono</th>}
-                {show('event')       && <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Evento</SortTH>}
                 {show('ticket_type') && <SortTH col="ticket_type" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Tipo</SortTH>}
+                {show('acceso')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Acceso</th>}
+                {show('date')        && <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Fecha</SortTH>}
+                {show('pais') && countryField && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>País</th>}
                 {show('amount')      && <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right whitespace-nowrap" style={TH_BASE}>Monto</SortTH>}
                 {show('method')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Método</th>}
-                {show('date')        && <SortTH col="date" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Fecha</SortTH>}
-                {show('acceso')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Acceso</th>}
+                {show('phone')       && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Teléfono</th>}
+                {show('event')       && <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Evento</SortTH>}
                 {visibleParticipantFields.map((f) => (
                   <th key={f.id} className="px-4 py-3 text-left font-medium text-xs"
-                    style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: '#f9fafb' }}>
+                    style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: BG_HEAD }}>
                     <div style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.label}>
                       {f.label}
                     </div>
@@ -429,7 +488,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 ))}
                 {internalFields.length > 0 && (
                   <th className="px-4 py-3 text-left font-medium text-purple-700"
-                    style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: '#f9fafb', whiteSpace: 'nowrap' }}>
+                    style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' }}>
                     Campos internos
                   </th>
                 )}
@@ -447,6 +506,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                     (f) => (f as { event_id: string }).event_id === (reg as { event_id: string }).event_id
                   )}
                   hiddenCols={hiddenCols}
+                  countryFieldId={countryField?.id ?? null}
                   onStatusChange={handleStatusChange}
                   onRequestPaidConfirm={(regId) => setPendingConfirm(regId)}
                   onInternalSave={handleInternalSave}
@@ -492,7 +552,7 @@ function SortTH({
 }
 
 function RegistrationRowItem({
-  reg, rowIndex, participantFields, internalFields, hiddenCols,
+  reg, rowIndex, participantFields, internalFields, hiddenCols, countryFieldId,
   onStatusChange, onRequestPaidConfirm, onInternalSave,
 }: {
   reg: RegistrationRow
@@ -500,6 +560,7 @@ function RegistrationRowItem({
   participantFields: OrgField[]
   internalFields: OrgField[]
   hiddenCols: Set<string>
+  countryFieldId: string | null
   onStatusChange: (id: string, status: string) => Promise<void>
   onRequestPaidConfirm: (regId: string) => void
   onInternalSave: (regId: string, attendeeId: string, updates: Record<string, string | boolean>) => void
@@ -546,8 +607,8 @@ function RegistrationRowItem({
           </div>
         ) : <span className="text-muted-foreground">—</span>}
       </td>
-      {/* ── Sticky: Estado ── */}
-      <td className="px-4 py-3" style={{ ...STICKY_ESTADO, backgroundColor: rowBg, boxShadow: SHADOW_RIGHT }}>
+      {/* ── Sticky: Pago (estado + monto • método) ── */}
+      <td className="px-4 py-3" style={{ ...STICKY_PAGO, backgroundColor: rowBg, boxShadow: SHADOW_RIGHT }}>
         <select
           value={reg.status}
           onChange={(e) => handleStatus(e.target.value)}
@@ -559,20 +620,29 @@ function RegistrationRowItem({
           <option value="paid">Pagado</option>
           <option value="cancelled">Cancelado</option>
         </select>
+        <p className="text-xs text-muted-foreground mt-0.5 whitespace-nowrap">
+          {formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}
+          {reg.payment_method ? ` • ${METHOD_SHORT[reg.payment_method] ?? reg.payment_method}` : ''}
+        </p>
       </td>
-      {show('phone')       && <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{attendee?.phone ?? '—'}</td>}
-      {show('event')       && <td className="px-4 py-3 text-muted-foreground text-xs">{eventName ?? '—'}</td>}
       {show('ticket_type') && <td className="px-4 py-3 text-muted-foreground text-xs">{ticketType?.name ?? '—'}</td>}
-      {show('amount')      && <td className="px-4 py-3 text-right font-medium text-xs">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</td>}
-      {show('method')      && <td className="px-4 py-3 text-muted-foreground text-xs">{reg.payment_method ? (METHOD_LABELS[reg.payment_method] ?? reg.payment_method) : '—'}</td>}
-      {show('date')        && <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>}
-      {show('acceso')      && (
+      {show('acceso') && (
         <td className="px-4 py-3 text-xs">
           {ticket?.status === 'used' && ticket.checked_in_at
             ? <span className="text-green-700 font-medium">✓ {formatTime(ticket.checked_in_at)}</span>
             : <span className="text-muted-foreground">—</span>}
         </td>
       )}
+      {show('date')   && <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>}
+      {show('pais') && countryFieldId && (
+        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+          {(attendee?.extra_data?.[countryFieldId] as string | undefined) ?? '—'}
+        </td>
+      )}
+      {show('amount') && <td className="px-4 py-3 text-right font-medium text-xs">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</td>}
+      {show('method') && <td className="px-4 py-3 text-muted-foreground text-xs">{reg.payment_method ? (METHOD_LABELS[reg.payment_method] ?? reg.payment_method) : '—'}</td>}
+      {show('phone')  && <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{attendee?.phone ?? '—'}</td>}
+      {show('event')  && <td className="px-4 py-3 text-muted-foreground text-xs">{eventName ?? '—'}</td>}
       {participantFields.map((f) => {
         const extra = (attendee?.extra_data as Record<string, unknown>) ?? {}
         const v = extra[f.id]
