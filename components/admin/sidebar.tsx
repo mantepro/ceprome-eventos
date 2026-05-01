@@ -27,8 +27,8 @@ export async function Sidebar() {
         <span className="font-semibold text-sm tracking-tight">CEPROME Admin</span>
       </div>
       <nav className="flex-1 p-3 space-y-0.5">
-        {navItems.map(({ href, label, icon, exact }) => (
-          <SidebarLink key={href} href={href} label={label} icon={icon} exact={exact} />
+        {navItems.map(({ href, label, icon: Icon, exact }) => (
+          <SidebarLink key={href} href={href} label={label} icon={<Icon className="h-4 w-4 shrink-0" />} exact={exact} />
         ))}
       </nav>
     </aside>

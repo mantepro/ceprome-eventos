@@ -3,16 +3,16 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 interface Props {
   href: string
   label: string
-  icon: LucideIcon
+  icon: ReactNode
   exact: boolean
 }
 
-export function SidebarLink({ href, label, icon: Icon, exact }: Props) {
+export function SidebarLink({ href, label, icon, exact }: Props) {
   const pathname = usePathname()
   const active = exact ? pathname === href : pathname.startsWith(href)
 
@@ -26,7 +26,7 @@ export function SidebarLink({ href, label, icon: Icon, exact }: Props) {
           : 'text-muted-foreground hover:bg-muted hover:text-foreground'
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      {icon}
       {label}
     </Link>
   )
