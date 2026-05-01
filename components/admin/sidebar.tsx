@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Calendar, CreditCard, Users, ScanLine, Settings, Ticket } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, Users, ScanLine, Settings, Ticket, UserCog } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/admin/inscritos', label: 'Inscritos', icon: Users, exact: false },
   { href: '/admin/pagos', label: 'Pagos', icon: CreditCard, exact: false },
   { href: '/admin/cupones', label: 'Cupones', icon: Ticket, exact: false },
+  { href: '/admin/usuarios', label: 'Usuarios', icon: UserCog, exact: false },
   { href: '/admin/acceso', label: 'Acceso', icon: ScanLine, exact: false },
   { href: '/admin/configuracion', label: 'Configuración', icon: Settings, exact: false },
 ]

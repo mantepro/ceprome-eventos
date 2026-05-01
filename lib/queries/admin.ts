@@ -241,3 +241,30 @@ export const getCoupons = cache(async (orgId: string) => {
 })
 
 export type CouponRow = Awaited<ReturnType<typeof getCoupons>>[number]
+
+export type UserRow = {
+  id: string
+  organization_id: string
+  role: 'super_admin' | 'org_admin' | 'event_staff'
+  first_name: string | null
+  last_name: string | null
+  email: string
+  active: boolean
+  created_at: string
+  organizations: { name: string } | null
+}
+
+export async function getOrgUsers(orgId: string, isSuperAdmin: boolean): Promise<UserRow[]> {
+  const supabase = createAdminClient()
+  let query = supabase
+    .from('users')
+    .select('id, organization_id, role, first_name, last_name, email, active, created_at, organizations(name)')
+    .order('created_at', { ascending: false })
+
+  if (!isSuperAdmin) {
+    query = query.eq('organization_id', orgId)
+  }
+
+  const { data } = await query
+  return (data ?? []) as unknown as UserRow[]
+}
