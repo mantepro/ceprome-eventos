@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, MoreHorizontal } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, MoreHorizontal, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { updateRegistrationStatus, updateAttendeeExtraData } from '@/lib/actions/registrations'
 import { confirmPayment, type PaymentMethod } from '@/lib/actions/payments'
-import { checkInTicket, revertCheckIn } from '@/lib/actions/checkin'
+import { checkInTicket, revertCheckIn, registerCashPayment } from '@/lib/actions/checkin'
 import { PaymentMethodModal } from '@/components/admin/payment-actions'
 import { formatCurrency, formatDateShort, formatTime } from '@/lib/utils'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
@@ -120,6 +120,10 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const [showColPicker, setShowColPicker] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null)
   const [confirmLoading, startConfirmLoading] = useTransition()
+  const [pendingCheckinConfirm, setPendingCheckinConfirm] = useState<{ regId: string; ticketId: string } | null>(null)
+  const [cashPaymentTarget, setCashPaymentTarget] = useState<{ regId: string; ticketId: string | null; amount: number; currency: string } | null>(null)
+  const [cashDoPayment, setCashDoPayment] = useState(true)
+  const [cashDoCheckIn, setCashDoCheckIn] = useState(true)
   const colPickerRef = useRef<HTMLDivElement>(null)
   const seenFieldIds = useRef(new Set<string>())
 
@@ -346,7 +350,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     )
   }
 
-  async function handleCheckIn(regId: string, ticketId: string) {
+  async function executeCheckIn(regId: string, ticketId: string) {
     const now = new Date().toISOString()
     setRegistrations((prev) => prev.map((r) => {
       if (r.id !== regId) return r
@@ -366,6 +370,11 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     })
   }
 
+  function handleCheckIn(regId: string, ticketId: string, isPaid: boolean) {
+    if (!isPaid) { setPendingCheckinConfirm({ regId, ticketId }); return }
+    executeCheckIn(regId, ticketId)
+  }
+
   async function handleRevertCheckIn(regId: string, ticketId: string) {
     setRegistrations((prev) => prev.map((r) => {
       if (r.id !== regId) return r
@@ -374,6 +383,32 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     const result = await revertCheckIn(ticketId)
     if (result.error) toast.error('Error al revertir check-in')
     else toast.success('Check-in revertido')
+  }
+
+  async function handleConfirmCashPayment() {
+    if (!cashPaymentTarget) return
+    const { regId, ticketId } = cashPaymentTarget
+    setCashPaymentTarget(null)
+
+    if (cashDoPayment) {
+      setRegistrations((prev) => prev.map((r) =>
+        r.id !== regId ? r : { ...r, status: 'paid', payment_method: 'manual' as const }
+      ))
+      const result = await registerCashPayment(regId)
+      if (result.error) {
+        setRegistrations((prev) => prev.map((r) =>
+          r.id !== regId ? r : { ...r, status: 'pending' }
+        ))
+        toast.error('Error al registrar pago')
+        return
+      }
+    }
+
+    if (cashDoCheckIn && ticketId) {
+      await executeCheckIn(regId, ticketId)
+    } else {
+      toast.success('✅ Pago en efectivo registrado')
+    }
   }
 
   function handleExport() {
@@ -412,6 +447,63 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
         onConfirm={handlePaidWithMethod}
         isPending={confirmLoading}
       />
+
+      {/* Modal: check-in con pago pendiente */}
+      <Dialog open={pendingCheckinConfirm !== null} onOpenChange={() => setPendingCheckinConfirm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>⚠️ Pago pendiente</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Este asistente aún no ha completado su pago. ¿Deseas registrar su entrada de todos modos?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingCheckinConfirm(null)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (pendingCheckinConfirm) executeCheckIn(pendingCheckinConfirm.regId, pendingCheckinConfirm.ticketId)
+              setPendingCheckinConfirm(null)
+            }}>
+              Registrar de todos modos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: pago en efectivo */}
+      <Dialog open={cashPaymentTarget !== null} onOpenChange={(open) => { if (!open) setCashPaymentTarget(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Pago en efectivo</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm font-semibold">
+            {formatCurrency(cashPaymentTarget?.amount ?? 0, cashPaymentTarget?.currency ?? 'USD')}
+          </p>
+          <div className="space-y-2 pt-1">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cashDoPayment}
+                onChange={(e) => setCashDoPayment(e.target.checked)}
+                className="h-4 w-4 rounded"
+              />
+              Marcar como pagado (método: efectivo)
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cashDoCheckIn}
+                onChange={(e) => setCashDoCheckIn(e.target.checked)}
+                className="h-4 w-4 rounded"
+              />
+              Registrar entrada (check-in)
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCashPaymentTarget(null)}>Cancelar</Button>
+            <Button onClick={handleConfirmCashPayment}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -605,6 +697,11 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                   onInternalSave={handleInternalSave}
                   onCheckIn={handleCheckIn}
                   onRevertCheckIn={handleRevertCheckIn}
+                  onCashPayment={(regId, ticketId, amount, currency) => {
+                    setCashDoPayment(true)
+                    setCashDoCheckIn(true)
+                    setCashPaymentTarget({ regId, ticketId, amount, currency })
+                  }}
                 />
               ))}
             </tbody>
@@ -648,7 +745,7 @@ function SortTH({
 
 function RegistrationRowItem({
   reg, rowIndex, participantFields, internalFields, hiddenCols, countryFieldId,
-  onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn,
+  onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn, onCashPayment,
 }: {
   reg: RegistrationRow
   rowIndex: number
@@ -659,8 +756,9 @@ function RegistrationRowItem({
   onStatusChange: (id: string, status: string) => Promise<void>
   onRequestPaidConfirm: (regId: string) => void
   onInternalSave: (regId: string, attendeeId: string, updates: Record<string, string | boolean>) => void
-  onCheckIn: (regId: string, ticketId: string) => void
+  onCheckIn: (regId: string, ticketId: string, isPaid: boolean) => void
   onRevertCheckIn: (regId: string, ticketId: string) => void
+  onCashPayment: (regId: string, ticketId: string | null, amount: number, currency: string) => void
 }) {
   const [statusPending, startStatus] = useTransition()
   const attendee = (reg.attendees as {
@@ -712,12 +810,16 @@ function RegistrationRowItem({
       {show('acceso') && (
         <td className="px-4 py-3 text-xs" style={{ ...STICKY_CHECKIN, backgroundColor: rowBg }}>
           {ticket?.status === 'used' && ticket.checked_in_at ? (
-            <span className="text-green-700 font-medium whitespace-nowrap">✅ {formatTime(ticket.checked_in_at)}</span>
+            <span className="inline-flex items-center gap-1 text-green-700 font-medium whitespace-nowrap">
+              ✅ {formatTime(ticket.checked_in_at)}
+              {reg.status !== 'paid' && <span title="Pago pendiente">⚠️</span>}
+            </span>
           ) : ticket?.status === 'active' ? (
             <button
-              onClick={() => onCheckIn(reg.id, ticket.id)}
-              className="text-xs border border-green-600 text-green-700 rounded px-2 py-1 hover:bg-green-50 transition-colors whitespace-nowrap"
+              onClick={() => onCheckIn(reg.id, ticket.id, reg.status === 'paid')}
+              className="inline-flex items-center gap-1.5 text-xs bg-green-600 text-white rounded px-2 py-1 hover:bg-green-700 transition-colors cursor-pointer whitespace-nowrap"
             >
+              <LogIn className="h-3 w-3" />
               Registrar entrada
             </button>
           ) : (
@@ -789,6 +891,18 @@ function RegistrationRowItem({
             <DropdownMenuItem asChild>
               <Link href={`/admin/inscritos/${reg.id}`}>Ver detalle</Link>
             </DropdownMenuItem>
+            {reg.status !== 'paid' && (
+              <DropdownMenuItem
+                onClick={() => onCashPayment(
+                  reg.id,
+                  ticket?.id ?? null,
+                  reg.total_amount,
+                  ticketType?.currency ?? 'USD'
+                )}
+              >
+                💵 Registrar pago en efectivo
+              </DropdownMenuItem>
+            )}
             {ticket?.status === 'used' && ticket.id && (
               <DropdownMenuItem
                 onClick={() => onRevertCheckIn(reg.id, ticket.id)}
