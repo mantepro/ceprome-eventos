@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m 'fix: truncar texto en th/td de campos personalizados con maxWidth inline *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
