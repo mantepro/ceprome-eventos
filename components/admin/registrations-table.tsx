@@ -68,10 +68,14 @@ const STICKY_ESTADO = { position: 'sticky' as const, left: 316, zIndex: 2, minWi
 // Header cells: doubly sticky (vertical top:0 + horizontal left:X) with solid opaque background
 const BG_HEAD       = '#f9fafb'
 const SHADOW_RIGHT  = '2px 0 4px -1px rgba(0,0,0,0.08)'
+const SHADOW_LEFT   = '-2px 0 4px -1px rgba(0,0,0,0.08)'
 const TH_BASE       = { position: 'sticky' as const, top: 0, zIndex: 3,  backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
 const TH_FOLIO      = { ...STICKY_FOLIO,  top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
 const TH_NOMBRE     = { ...STICKY_NOMBRE, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const }
 const TH_ESTADO     = { ...STICKY_ESTADO, top: 0, zIndex: 11, backgroundColor: BG_HEAD, whiteSpace: 'nowrap' as const, boxShadow: SHADOW_RIGHT }
+// Sticky-right "Ver" column
+const TH_VER        = { position: 'sticky' as const, right: 0, top: 0, zIndex: 12, backgroundColor: BG_HEAD, boxShadow: SHADOW_LEFT }
+const TD_VER        = { position: 'sticky' as const, right: 0, zIndex: 2, boxShadow: SHADOW_LEFT }
 
 interface Props {
   registrations: RegistrationRow[]
@@ -427,8 +431,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                     Campos internos
                   </th>
                 )}
-                <th className="px-4 py-3"
-                  style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: '#f9fafb' }}></th>
+                <th className="px-4 py-3" style={TH_VER}></th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -573,13 +576,13 @@ function RegistrationRowItem({
         const v = extra[f.id]
         const display = v === true ? 'Sí' : v === false ? 'No' : v != null ? String(v) : '—'
         return (
-          <td key={f.id} className="px-4 py-3 text-xs max-w-[140px]">
+          <td key={f.id} className="px-4 py-3 text-xs max-w-[140px]" style={{ backgroundColor: rowBg }}>
             <span className="block truncate" title={display !== '—' ? display : undefined}>{display}</span>
           </td>
         )
       })}
       {internalFields.length > 0 && (
-        <td className="px-4 py-3">
+        <td className="px-4 py-3" style={{ backgroundColor: rowBg }}>
           {attendee && (
             <InternalFieldsDialog
               reg={reg}
@@ -591,7 +594,7 @@ function RegistrationRowItem({
           )}
         </td>
       )}
-      <td className="px-4 py-3 text-right">
+      <td className="px-4 py-3 text-right" style={{ ...TD_VER, backgroundColor: rowBg }}>
         <Link href={`/admin/inscritos/${reg.id}`} className="text-xs text-primary hover:underline">Ver</Link>
       </td>
     </tr>
