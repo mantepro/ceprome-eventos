@@ -389,7 +389,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
       ) : (
         <div className="rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-muted-foreground">
+            <thead className="text-muted-foreground" style={{ backgroundColor: '#f9fafb', position: 'sticky', top: 0, zIndex: 3 }}>
               <tr>
                 {/* ── Sticky: Folio ── */}
                 <SortTH col="folio" active={sortCol} dir={sortDir} onSort={handleSort}
