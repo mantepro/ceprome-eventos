@@ -111,6 +111,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null)
   const [confirmLoading, startConfirmLoading] = useTransition()
   const colPickerRef = useRef<HTMLDivElement>(null)
+  const seenFieldIds = useRef(new Set<string>())
 
   useEffect(() => {
     if (!showColPicker) return
@@ -179,6 +180,16 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
       : []),
     [orgFields, singleEventId]
   )
+
+  useEffect(() => {
+    const newIds = visibleParticipantFields
+      .filter(f => !seenFieldIds.current.has(f.id))
+      .map(f => f.id)
+    if (newIds.length > 0) {
+      newIds.forEach(id => seenFieldIds.current.add(id))
+      setHiddenCols(prev => new Set([...prev, ...newIds]))
+    }
+  }, [visibleParticipantFields])
 
   const uniqueEvents = useMemo(() => {
     const map = new Map<string, string>()
@@ -381,6 +392,26 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                     {col.label}
                   </label>
                 ))}
+                {visibleParticipantFields.length > 0 && (
+                  <>
+                    <div className="my-1.5 h-px bg-border" />
+                    <p className="px-2 py-1 text-xs text-muted-foreground font-medium">Campos del formulario</p>
+                    {visibleParticipantFields.map((f) => (
+                      <label
+                        key={f.id}
+                        className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-accent rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={show(f.id)}
+                          onChange={() => toggleCol(f.id)}
+                          className="h-3.5 w-3.5"
+                        />
+                        {f.label}
+                      </label>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -478,7 +509,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 {show('method')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Método</th>}
                 {show('phone')       && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Teléfono</th>}
                 {show('event')       && <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Evento</SortTH>}
-                {visibleParticipantFields.map((f) => (
+                {visibleParticipantFields.filter(f => show(f.id)).map((f) => (
                   <th key={f.id} className="px-4 py-3 text-left font-medium text-xs"
                     style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: BG_HEAD }}>
                     <div style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.label}>
@@ -501,7 +532,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                   key={reg.id}
                   reg={reg}
                   rowIndex={idx}
-                  participantFields={visibleParticipantFields}
+                  participantFields={visibleParticipantFields.filter(f => show(f.id))}
                   internalFields={internalFields.filter(
                     (f) => (f as { event_id: string }).event_id === (reg as { event_id: string }).event_id
                   )}
