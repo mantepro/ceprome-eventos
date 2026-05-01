@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentUserProfile } from '@/lib/queries/admin'
+import { getCurrentUserProfile, getEventRegistrations } from '@/lib/queries/admin'
 import { confirmPayment } from '@/lib/actions/payments'
 
 export async function checkInTicket(
@@ -36,6 +36,12 @@ export async function revertCheckIn(
     .eq('status', 'used')
 
   return error ? { error: error.message } : {}
+}
+
+export async function fetchEventRegistrations(eventId: string) {
+  const profile = await getCurrentUserProfile()
+  if (!profile) return []
+  return getEventRegistrations(eventId, profile.organization_id)
 }
 
 export async function registerCashPayment(

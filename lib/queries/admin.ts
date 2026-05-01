@@ -106,6 +106,24 @@ export const getRegistrations = cache(async (orgId: string) => {
 
 export type RegistrationRow = Awaited<ReturnType<typeof getRegistrations>>[number]
 
+export const getEventRegistrations = cache(async (eventId: string, orgId: string) => {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('registrations')
+    .select(`
+      id, folio, status, payment_method, total_amount, created_at,
+      attendees(id, first_name, last_name, email, phone),
+      tickets(id, status, checked_in_at, ticket_types(name, currency))
+    `)
+    .eq('organization_id', orgId)
+    .eq('event_id', eventId)
+    .neq('status', 'cancelled')
+    .order('created_at', { ascending: false })
+  return data ?? []
+})
+
+export type EventRegistrationRow = Awaited<ReturnType<typeof getEventRegistrations>>[number]
+
 export const getCheckinStats = cache(async (orgId: string) => {
   const supabase = createAdminClient()
   const [checkedIn, totalPaid] = await Promise.all([
