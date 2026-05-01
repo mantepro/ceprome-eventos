@@ -37,12 +37,16 @@ export async function POST(request: NextRequest) {
 
   let result: ScanResult['result']
 
+  const reg = ticket?.registrations as unknown as { folio: string; status: string } | null
+
   if (
     !ticket ||
     ticket.organization_id !== profile.organization_id ||
     ticket.event_id !== event_id
   ) {
     result = 'not_found'
+  } else if (reg?.status === 'cancelled') {
+    result = 'cancelled'
   } else if (ticket.status === 'pending') {
     result = 'pending_payment'
   } else if (ticket.status === 'cancelled') {
@@ -50,8 +54,7 @@ export async function POST(request: NextRequest) {
   } else if (ticket.status === 'used') {
     result = 'already_used'
   } else if (ticket.status === 'active') {
-    const regStatus = (ticket.registrations as unknown as { folio: string; status: string } | null)?.status
-    result = regStatus === 'paid' ? 'valid' : 'valid_pending_payment'
+    result = reg?.status === 'paid' ? 'valid' : 'valid_pending_payment'
     await admin
       .from('tickets')
       .update({ status: 'used', checked_in_at: new Date().toISOString() })
@@ -76,7 +79,6 @@ export async function POST(request: NextRequest) {
 
   if ((result === 'valid' || result === 'valid_pending_payment' || result === 'already_used') && ticket) {
     const attendee = ticket.attendees as unknown as { first_name: string; last_name: string } | null
-    const reg = ticket.registrations as unknown as { folio: string; status: string } | null
     const tt = ticket.ticket_types as unknown as { name: string } | null
 
     let kitStation: string | null = null
