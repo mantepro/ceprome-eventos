@@ -114,10 +114,11 @@ export function Scanner({ eventId, eventName }: Props) {
     }
   }, [startLoop])
 
-  // Auto-reset 4 s after showing a result
+  // Auto-reset after showing a result; duration varies by result type
   useEffect(() => {
     if (phase.id === 'result') {
-      const timer = setTimeout(reset, 4000)
+      const ms = phase.data.result === 'valid' ? 3000 : 5000
+      const timer = setTimeout(reset, ms)
       return () => clearTimeout(timer)
     }
   }, [phase.id, reset])
