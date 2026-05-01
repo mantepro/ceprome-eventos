@@ -7,6 +7,76 @@ import { generateAndSendTicket } from '@/lib/actions/generate-ticket'
 
 export type PaymentMethod = 'paypal' | 'manual' | 'transferencia' | 'deposito' | 'taquilla' | 'otro'
 
+export async function confirmPaymentPublic(
+  registrationId: string,
+  method: PaymentMethod = 'paypal'
+): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+
+  const { data: reg } = await supabase
+    .from('registrations')
+    .select('id, status, total_amount, organization_id')
+    .eq('id', registrationId)
+    .single()
+
+  if (!reg) return { error: 'Inscripción no encontrada.' }
+  if (reg.status === 'paid') return {}
+
+  const { data: pendingPayment } = await supabase
+    .from('payments')
+    .select('id')
+    .eq('registration_id', registrationId)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (pendingPayment) {
+    await supabase
+      .from('payments')
+      .update({ status: 'completed', method, verified_at: new Date().toISOString() })
+      .eq('id', pendingPayment.id)
+  } else {
+    const { data: completedPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('registration_id', registrationId)
+      .eq('status', 'completed')
+      .maybeSingle()
+
+    if (!completedPayment) {
+      const { data: ticketRow } = await supabase
+        .from('tickets')
+        .select('ticket_types(currency)')
+        .eq('registration_id', registrationId)
+        .limit(1)
+        .maybeSingle()
+      const currency = (ticketRow?.ticket_types as { currency: string } | null)?.currency ?? 'USD'
+
+      await supabase.from('payments').insert({
+        registration_id: registrationId,
+        organization_id: reg.organization_id,
+        amount: reg.total_amount,
+        currency,
+        method,
+        status: 'completed',
+        verified_at: new Date().toISOString(),
+      })
+    }
+  }
+
+  await supabase.from('registrations').update({ status: 'paid' }).eq('id', registrationId)
+  await supabase
+    .from('tickets')
+    .update({ status: 'active' })
+    .eq('registration_id', registrationId)
+    .eq('status', 'pending')
+
+  generateAndSendTicket(registrationId).catch((err) =>
+    console.error('[confirmPaymentPublic] generateAndSendTicket:', err)
+  )
+
+  return {}
+}
+
 export async function confirmPayment(
   registrationId: string,
   method: PaymentMethod = 'manual'

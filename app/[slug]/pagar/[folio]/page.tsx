@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getRegistrationByFolio } from '@/lib/queries/registrations'
-import { PayPalFromPagarButton } from '@/components/public/paypal-from-pagar-button'
+import { PayPalSdkButton } from '@/components/public/paypal-sdk-button'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
 type Params = Promise<{ slug: string; folio: string }>
@@ -160,11 +160,13 @@ export default async function PagarPage({
         <div className="px-4 py-3 border-b bg-muted/30">
           <p className="text-sm font-semibold">Pagar con PayPal o tarjeta</p>
         </div>
-        <div className="px-4 py-4 space-y-2">
-          <PayPalFromPagarButton folio={folio} orgSlug={slug} />
-          <p className="text-xs text-center text-muted-foreground">
-            Pago seguro procesado por PayPal
-          </p>
+        <div className="px-4 py-4">
+          <PayPalSdkButton
+            folio={folio}
+            orgSlug={slug}
+            currency={ticket?.ticket_types?.currency ?? 'USD'}
+            amount={reg.total_amount}
+          />
         </div>
       </div>
 
