@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
     result = 'not_found'
   } else if (reg?.status === 'cancelled') {
     result = 'cancelled'
+  } else if (reg?.status === 'refunded') {
+    result = 'refunded'
   } else if (ticket.status === 'pending') {
     result = 'pending_payment'
   } else if (ticket.status === 'cancelled') {
@@ -63,21 +65,21 @@ export async function POST(request: NextRequest) {
     result = 'not_found'
   }
 
-  // Log every scan that has a known ticket.
-  // valid_pending_payment is stored as 'valid' to satisfy the scan_logs CHECK constraint.
+  // Log every scan that has a known ticket
   if (ticket && result !== 'not_found') {
     await admin.from('scan_logs').insert({
       ticket_id: ticket.id,
       organization_id: profile.organization_id,
       event_id,
       scanned_by: user.id,
-      result: result === 'valid_pending_payment' ? 'valid' : result,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      result: result as any,
     })
   }
 
   const response: ScanResult = { result }
 
-  if ((result === 'valid' || result === 'valid_pending_payment' || result === 'already_used') && ticket) {
+  if ((result === 'valid' || result === 'valid_pending_payment' || result === 'already_used' || result === 'refunded') && ticket) {
     const attendee = ticket.attendees as unknown as { first_name: string; last_name: string } | null
     const tt = ticket.ticket_types as unknown as { name: string } | null
 

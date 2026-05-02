@@ -39,10 +39,11 @@ import type { RegistrationRow, OrgField } from '@/lib/queries/admin'
 type SortCol = 'folio' | 'name' | 'event' | 'ticket_type' | 'amount' | 'status' | 'date'
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  pending:   { label: 'Pendiente',  className: 'bg-amber-400 text-amber-950' },
-  paid:      { label: 'Pagado',     className: 'bg-green-600 text-white' },
-  cancelled: { label: 'Cancelado',  className: 'bg-red-600 text-white' },
-  draft:     { label: 'Borrador',   className: 'bg-gray-400 text-white' },
+  pending:   { label: 'Pendiente',   className: 'bg-amber-400 text-amber-950' },
+  paid:      { label: 'Pagado',      className: 'bg-green-600 text-white' },
+  cancelled: { label: 'Cancelado',   className: 'bg-red-600 text-white' },
+  draft:     { label: 'Borrador',    className: 'bg-gray-400 text-white' },
+  refunded:  { label: 'Reembolsado', className: 'bg-purple-600 text-white' },
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -298,13 +299,14 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   }, [filtered, sortCol, sortDir])
 
   const stats = useMemo(() => {
-    const total = sorted.length
-    const paid = sorted.filter(r => r.status === 'paid').length
-    const checkin = sorted.filter(r => {
+    const active = sorted.filter(r => (r.status as string) !== 'cancelled' && (r.status as string) !== 'refunded')
+    const total = active.length
+    const paid = active.filter(r => r.status === 'paid').length
+    const checkin = active.filter(r => {
       const t = (r.tickets as { status: string }[])?.[0]
       return t?.status === 'used'
     }).length
-    const pending = sorted.filter(r => r.status === 'pending').length
+    const pending = active.filter(r => r.status === 'pending').length
     return { total, paid, checkin, pending, paidPct: total > 0 ? Math.round((paid / total) * 100) : 0 }
   }, [sorted])
 
@@ -574,6 +576,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
             <SelectItem value="pending">Pendiente</SelectItem>
             <SelectItem value="paid">Pagado</SelectItem>
             <SelectItem value="cancelled">Cancelado</SelectItem>
+            <SelectItem value="refunded">Reembolsado</SelectItem>
           </SelectContent>
         </Select>
 

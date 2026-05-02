@@ -1,5 +1,5 @@
 export type ScanResult = {
-  result: 'valid' | 'valid_pending_payment' | 'already_used' | 'pending_payment' | 'cancelled' | 'not_found'
+  result: 'valid' | 'valid_pending_payment' | 'already_used' | 'pending_payment' | 'cancelled' | 'refunded' | 'not_found'
   attendee?: {
     name: string
     folio: string

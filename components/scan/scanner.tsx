@@ -240,6 +240,12 @@ function ScanResultOverlay({
             </p>
           )}
 
+          {data.result === 'refunded' && (
+            <p className="text-center text-sm font-semibold text-white bg-red-900/50 rounded-xl px-4 py-2">
+              Acceso no permitido
+            </p>
+          )}
+
           {data.result === 'already_used' && data.checked_in_at && (
             <p className={`text-center text-sm ${config.subColor}`}>
               Check-in registrado: {new Date(data.checked_in_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
@@ -316,6 +322,16 @@ const resultConfig: Record<ScanResult['result'], ResultConfig> = {
     bg: 'bg-red-700',
     icon: '🚫',
     title: 'TICKET CANCELADO',
+    titleColor: 'text-white',
+    cardBg: 'bg-white/20',
+    nameColor: 'text-white',
+    subColor: 'text-red-200',
+    btnClass: 'bg-white text-red-700 hover:bg-red-50',
+  },
+  refunded: {
+    bg: 'bg-red-700',
+    icon: '💸',
+    title: 'INSCRIPCIÓN REEMBOLSADA',
     titleColor: 'text-white',
     cardBg: 'bg-white/20',
     nameColor: 'text-white',
