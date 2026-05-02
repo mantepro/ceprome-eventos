@@ -1,122 +1,187 @@
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 
+// CEPROME brand palette
+const C = {
+  guinda:   '#a22944',
+  grisClaro: '#d9d9d9',
+  grisOscuro: '#585857',
+  negro:    '#111111',
+  blanco:   '#ffffff',
+}
+
 const styles = StyleSheet.create({
   page: {
     fontFamily: 'Helvetica',
     fontSize: 10,
-    paddingTop: 48,
-    paddingBottom: 48,
-    paddingHorizontal: 56,
-    color: '#111',
+    color: C.negro,
+    backgroundColor: C.blanco,
+    // No page-level padding — header must bleed to edges
   },
+
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
-    marginBottom: 28,
-    borderBottom: '2px solid #111',
-    paddingBottom: 12,
+    backgroundColor: C.guinda,
+    paddingTop: 22,
+    paddingBottom: 18,
+    paddingHorizontal: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  orgName: {
-    fontSize: 14,
+  headerLeft: {
+    flexDirection: 'column',
+  },
+  // Logo placeholder — swap for <Image> once /public/logo-ceprome.png is available:
+  // import { Image } from '@react-pdf/renderer'
+  // <Image src={path.join(process.cwd(), 'public/logo-ceprome.png')} style={styles.logo} />
+  // style={{ width: 120, height: 40 }}
+  headerLogoText: {
+    fontSize: 24,
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 4,
+    color: C.blanco,
+    letterSpacing: 2,
   },
-  title: {
-    fontSize: 20,
-    fontFamily: 'Helvetica-Bold',
-    color: '#222',
-    marginBottom: 2,
-  },
-  subtitle: {
+  headerTitle: {
     fontSize: 10,
-    color: '#555',
+    color: C.blanco,
+    letterSpacing: 0.5,
+    marginTop: 4,
+    opacity: 0.9,
   },
+  headerDocType: {
+    fontSize: 8,
+    color: C.blanco,
+    opacity: 0.7,
+    textAlign: 'right',
+    marginTop: 2,
+  },
+
+  // ── Separator ─────────────────────────────────────────────────────────────
+  separator: {
+    height: 1,
+    backgroundColor: C.grisClaro,
+  },
+
+  // ── Body ──────────────────────────────────────────────────────────────────
+  body: {
+    paddingHorizontal: 40,
+    paddingTop: 24,
+    paddingBottom: 40,
+  },
+
+  // ── Sections ──────────────────────────────────────────────────────────────
   section: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   sectionLabel: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
-    color: '#666',
+    color: C.guinda,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     marginBottom: 6,
   },
+
+  // ── Data rows ─────────────────────────────────────────────────────────────
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 5,
-    borderBottom: '1px solid #eee',
+    borderBottom: `1px solid ${C.grisClaro}`,
   },
   rowLabel: {
-    color: '#555',
+    color: C.grisOscuro,
     flex: 1,
   },
   rowValue: {
     fontFamily: 'Helvetica-Bold',
     flex: 1,
     textAlign: 'right',
+    color: C.negro,
   },
+
+  // ── Total row ─────────────────────────────────────────────────────────────
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    marginTop: 4,
-    borderTop: '2px solid #111',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    backgroundColor: C.guinda,
   },
   totalLabel: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 12,
+    color: C.blanco,
   },
   totalValue: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 12,
+    color: C.blanco,
   },
-  folio: {
-    marginTop: 32,
-    padding: 12,
-    backgroundColor: '#f5f5f5',
+
+  // ── Folio block ───────────────────────────────────────────────────────────
+  folioBlock: {
+    marginTop: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: C.grisClaro,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   folioLabel: {
-    color: '#555',
+    color: C.grisOscuro,
     fontSize: 9,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   folioValue: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 14,
-    letterSpacing: 1,
+    fontSize: 16,
+    letterSpacing: 2,
+    color: C.guinda,
   },
-  footer: {
-    marginTop: 40,
-    fontSize: 8,
-    color: '#999',
-    textAlign: 'center',
-  },
-  disclaimer: {
-    marginTop: 8,
-    fontSize: 8,
-    color: '#999',
-    textAlign: 'center',
-  },
+
+  // ── Invoice section ───────────────────────────────────────────────────────
   invoiceSection: {
-    marginTop: 24,
+    marginTop: 20,
     padding: 12,
-    border: '1px solid #ddd',
+    border: `1px solid ${C.grisClaro}`,
   },
   invoiceSectionLabel: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
-    color: '#555',
+    color: C.guinda,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 6,
   },
   invoiceSectionBody: {
     fontSize: 9,
-    color: '#333',
+    color: C.grisOscuro,
     lineHeight: 1.5,
+  },
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  footerSeparator: {
+    height: 1,
+    backgroundColor: C.grisClaro,
+    marginTop: 28,
+    marginBottom: 10,
+  },
+  footer: {
+    fontSize: 8,
+    color: C.grisOscuro,
+    textAlign: 'center',
+  },
+  disclaimer: {
+    marginTop: 4,
+    fontSize: 8,
+    color: C.grisOscuro,
+    textAlign: 'center',
+    opacity: 0.7,
   },
 })
 
@@ -142,81 +207,98 @@ function ComprobanteDocument({ data }: { data: ComprobanteData }) {
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="LETTER" style={styles.page}>
+
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.orgName}>{data.orgName}</Text>
-          <Text style={styles.title}>
-            {isPrereg ? 'Confirmación de Pre-registro' : 'Comprobante de Inscripción'}
-          </Text>
-          <Text style={styles.subtitle}>
+          <View style={styles.headerLeft}>
+            {/* Replace with <Image> once logo-ceprome.png is in /public */}
+            <Text style={styles.headerLogoText}>CEPROME</Text>
+            <Text style={styles.headerTitle}>
+              {isPrereg ? 'Confirmación de Pre-registro' : 'Comprobante de Inscripción'}
+            </Text>
+          </View>
+          <Text style={styles.headerDocType}>
             {isPrereg
-              ? 'Este documento confirma tu lugar reservado. No es comprobante de pago.'
-              : 'Documento no fiscal — solo para fines de registro'}
+              ? 'Pre-registro — no es comprobante de pago'
+              : 'Documento no fiscal'}
           </Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Evento</Text>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Nombre</Text>
-            <Text style={styles.rowValue}>{data.eventName}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Fecha</Text>
-            <Text style={styles.rowValue}>{data.eventDate}</Text>
-          </View>
-          {data.eventLocation && (
+        <View style={styles.separator} />
+
+        {/* ── Body ── */}
+        <View style={styles.body}>
+
+          {/* Evento */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Evento</Text>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Lugar</Text>
-              <Text style={styles.rowValue}>{data.eventLocation}</Text>
+              <Text style={styles.rowLabel}>Nombre</Text>
+              <Text style={styles.rowValue}>{data.eventName}</Text>
             </View>
-          )}
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Fecha</Text>
+              <Text style={styles.rowValue}>{data.eventDate}</Text>
+            </View>
+            {data.eventLocation ? (
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>Lugar</Text>
+                <Text style={styles.rowValue}>{data.eventLocation}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Participante */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Participante</Text>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Nombre</Text>
+              <Text style={styles.rowValue}>{data.attendeeName}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Correo electrónico</Text>
+              <Text style={styles.rowValue}>{data.attendeeEmail}</Text>
+            </View>
+          </View>
+
+          {/* Inscripción */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Inscripción</Text>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Tipo de acceso</Text>
+              <Text style={styles.rowValue}>{data.ticketType}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Fecha de registro</Text>
+              <Text style={styles.rowValue}>{data.registrationDate}</Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>{formattedAmount}</Text>
+            </View>
+          </View>
+
+          {/* Folio */}
+          <View style={styles.folioBlock}>
+            <Text style={styles.folioLabel}>Folio de inscripción</Text>
+            <Text style={styles.folioValue}>{data.folio}</Text>
+          </View>
+
+          {/* Instrucciones de factura */}
+          {!isPrereg && data.invoiceInstructions ? (
+            <View style={styles.invoiceSection}>
+              <Text style={styles.invoiceSectionLabel}>Para solicitar factura fiscal</Text>
+              <Text style={styles.invoiceSectionBody}>{data.invoiceInstructions}</Text>
+            </View>
+          ) : null}
+
+          {/* Footer */}
+          <View style={styles.footerSeparator} />
+          <Text style={styles.footer}>{data.orgName} · Generado el {data.registrationDate}</Text>
+          <Text style={styles.disclaimer}>Este comprobante no tiene valor fiscal.</Text>
+
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Participante</Text>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Nombre</Text>
-            <Text style={styles.rowValue}>{data.attendeeName}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Correo</Text>
-            <Text style={styles.rowValue}>{data.attendeeEmail}</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Inscripción</Text>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Tipo de acceso</Text>
-            <Text style={styles.rowValue}>{data.ticketType}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Fecha de registro</Text>
-            <Text style={styles.rowValue}>{data.registrationDate}</Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formattedAmount}</Text>
-          </View>
-        </View>
-
-        <View style={styles.folio}>
-          <Text style={styles.folioLabel}>Folio de inscripción</Text>
-          <Text style={styles.folioValue}>{data.folio}</Text>
-        </View>
-
-        {data.docType !== 'prereg' && data.invoiceInstructions ? (
-          <View style={styles.invoiceSection}>
-            <Text style={styles.invoiceSectionLabel}>Para solicitar factura fiscal</Text>
-            <Text style={styles.invoiceSectionBody}>{data.invoiceInstructions}</Text>
-          </View>
-        ) : null}
-
-        <Text style={styles.footer}>{data.orgName} · Generado el {data.registrationDate}</Text>
-        <Text style={styles.disclaimer}>
-          Este comprobante no tiene valor fiscal.
-        </Text>
       </Page>
     </Document>
   )
@@ -224,7 +306,6 @@ function ComprobanteDocument({ data }: { data: ComprobanteData }) {
 
 export async function renderComprobante(data: ComprobanteData): Promise<Buffer> {
   const { renderToBuffer } = await import('@react-pdf/renderer')
-  // Cast needed: renderToBuffer expects DocumentProps element; ComprobanteDocument wraps Document so types are compatible at runtime
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const element = React.createElement(ComprobanteDocument, { data }) as any
   return renderToBuffer(element) as Promise<Buffer>
