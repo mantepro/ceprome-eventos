@@ -314,7 +314,7 @@ async function getLogoUri(): Promise<string | null> {
   if (_logoUri !== undefined) return _logoUri
   try {
     const sharp = (await import('sharp')).default
-    const svgPath = path.join(process.cwd(), 'public/logo-ceprome.svg')
+    const svgPath = path.join(process.cwd(), 'public/logo-ceprome-white.svg')
     const png = await sharp(svgPath).resize(412, 88).png().toBuffer()
     _logoUri = `data:image/png;base64,${png.toString('base64')}`
   } catch {
