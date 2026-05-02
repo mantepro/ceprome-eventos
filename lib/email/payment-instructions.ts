@@ -1,4 +1,5 @@
 import { resend } from '@/lib/resend'
+import { getEmailLogoUri } from '@/lib/email/logo'
 
 export interface PaymentInstructionsEmailParams {
   to: string
@@ -26,6 +27,7 @@ export async function sendPaymentInstructionsEmail(
   } = params
 
   const formattedAmount = `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${currency}`
+  const logoUri = await getEmailLogoUri()
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -35,9 +37,12 @@ export async function sendPaymentInstructionsEmail(
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
 
-        <tr><td style="background:#111;padding:24px 32px;">
-          <p style="margin:0;color:#fff;font-size:12px;opacity:0.7;">${orgName}</p>
-          <p style="margin:4px 0 0;color:#fff;font-size:22px;font-weight:700;">Instrucciones de pago</p>
+        <tr><td style="background:#a22944;padding:24px 32px;">
+          ${logoUri
+            ? `<img src="${logoUri}" alt="${orgName}" height="44" style="display:block;max-width:266px;" />`
+            : `<p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:2px;">${orgName}</p>`
+          }
+          <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;">Instrucciones de pago</p>
         </td></tr>
 
         <tr><td style="padding:32px;">
@@ -77,7 +82,7 @@ export async function sendPaymentInstructionsEmail(
 
           <div style="margin:0 0 24px;text-align:center;">
             <a href="${payLink}"
-               style="display:inline-block;background:#111;color:#fff;font-size:15px;font-weight:600;padding:14px 32px;border-radius:8px;text-decoration:none;">
+               style="display:inline-block;background:#a22944;color:#fff;font-size:15px;font-weight:600;padding:14px 32px;border-radius:8px;text-decoration:none;">
               Pagar en línea con PayPal →
             </a>
             <p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">O usa las instrucciones de transferencia a continuación</p>

@@ -1,5 +1,6 @@
 import { resend } from '@/lib/resend'
 import { renderComprobante, type ComprobanteData } from '@/lib/pdf/comprobante'
+import { getEmailLogoUri } from '@/lib/email/logo'
 
 const INVOICE_TRIGGER = 'Sí, requiero factura fiscal'
 
@@ -24,7 +25,7 @@ export interface ConfirmationEmailParams {
   isPaid?: boolean
 }
 
-function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean): string {
+function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean, logoUri: string | null): string {
   const { folio, attendeeName, eventName, eventDate, eventLocation, ticketType, amount, currency, orgName, orgEmail, whatsappContact, paymentMethod, invoiceInstructions, transferInstructions, isPaid } = params
 
   const formattedAmount = `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${currency}`
@@ -83,9 +84,12 @@ function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean): 
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
 
-        <tr><td style="background:#111;padding:24px 32px;">
-          <p style="margin:0;color:#fff;font-size:12px;opacity:0.7;">${orgName}</p>
-          <p style="margin:4px 0 0;color:#fff;font-size:22px;font-weight:700;">Confirmación de inscripción</p>
+        <tr><td style="background:#a22944;padding:24px 32px;">
+          ${logoUri
+            ? `<img src="${logoUri}" alt="${orgName}" height="44" style="display:block;max-width:266px;" />`
+            : `<p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:2px;">${orgName}</p>`
+          }
+          <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;">Confirmación de inscripción</p>
         </td></tr>
 
         <tr><td style="padding:32px;">
@@ -146,7 +150,8 @@ export async function sendConfirmationEmail(params: ConfirmationEmailParams): Pr
     (v) => v === INVOICE_TRIGGER
   )
 
-  const html = buildHtml(params, invoiceRequested)
+  const logoUri = await getEmailLogoUri()
+  const html = buildHtml(params, invoiceRequested, logoUri)
 
   const comprobanteData: ComprobanteData = {
     orgName: params.orgName,

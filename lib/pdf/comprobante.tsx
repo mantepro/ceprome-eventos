@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   },
   headerLogo: {
     height: 44,
-    width: 206,  // preserves 500:106.91 aspect ratio at h=44
+    width: 266,  // preserves 500:82.76 aspect ratio at h=44
   },
   headerLogoFallback: {
     fontSize: 24,
@@ -315,7 +315,7 @@ async function getLogoUri(): Promise<string | null> {
   try {
     const sharp = (await import('sharp')).default
     const svgPath = path.join(process.cwd(), 'public/logo-ceprome-white.svg')
-    const png = await sharp(svgPath).resize(412, 88).png().toBuffer()
+    const png = await sharp(svgPath).resize({ height: 88 }).png().toBuffer()
     _logoUri = `data:image/png;base64,${png.toString('base64')}`
   } catch {
     _logoUri = null

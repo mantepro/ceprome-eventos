@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { formatDate } from '@/lib/utils'
+import { getEmailLogoUri } from '@/lib/email/logo'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -32,11 +33,13 @@ export async function sendTicketEmail(params: TicketEmailParams) {
     attachments.push({ filename: `comprobante-${folio}.pdf`, content: pdfBuffer.toString('base64') })
   }
 
+  const logoUri = await getEmailLogoUri()
+
   const { error } = await resend.emails.send({
     from: process.env.RESEND_FROM!,
     to,
     subject: `Tu ticket — ${eventName} · ${folio}`,
-    html: buildEmailHtml(params),
+    html: buildEmailHtml(params, logoUri),
     attachments,
   })
 
@@ -55,7 +58,7 @@ function buildEmailHtml({
   ticketTypeName,
   qrUrl,
   whatsappContact,
-}: TicketEmailParams): string {
+}: TicketEmailParams, logoUri: string | null): string {
   const dateStr = formatDate(eventStartsAt)
 
   return `<!DOCTYPE html>
@@ -73,9 +76,12 @@ function buildEmailHtml({
 
           <!-- Header -->
           <tr>
-            <td style="background:#1a1a2e;padding:28px 32px;text-align:center;">
-              <p style="margin:0;color:#a5b4fc;font-size:12px;letter-spacing:2px;text-transform:uppercase;">VI Congreso Latinoamericano</p>
-              <h1 style="margin:8px 0 0;color:#ffffff;font-size:22px;font-weight:700;">CEPROME 2027</h1>
+            <td style="background:#a22944;padding:24px 32px;">
+              ${logoUri
+                ? `<img src="${logoUri}" alt="CEPROME" height="44" style="display:block;max-width:266px;" />`
+                : `<p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:2px;">CEPROME</p>`
+              }
+              <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;">Tu acceso al evento</p>
             </td>
           </tr>
 
