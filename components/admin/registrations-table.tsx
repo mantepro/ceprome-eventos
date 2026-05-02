@@ -322,8 +322,10 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   function resetPage() { setPage(1) }
 
   async function handleStatusChange(regId: string, newStatus: string) {
-    const s = newStatus as 'draft' | 'pending' | 'cancelled'
-    setRegistrations((prev) => prev.map((r) => (r.id === regId ? { ...r, status: s } : r)))
+    const s = newStatus as 'draft' | 'pending' | 'cancelled' | 'refunded'
+    setRegistrations((prev) => prev.map((r) =>
+      r.id === regId ? { ...r, status: s as typeof r.status } : r
+    ))
     await updateRegistrationStatus(regId, s)
   }
 
@@ -854,6 +856,7 @@ function RegistrationRowItem({
           <option value="pending">Pendiente</option>
           <option value="paid">Pagado</option>
           <option value="cancelled">Cancelado</option>
+          <option value="refunded">Reembolsado</option>
         </select>
         <p className="text-xs mt-0.5 whitespace-nowrap">
           <span className="font-semibold text-foreground">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</span>

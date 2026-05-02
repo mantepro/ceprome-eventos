@@ -6,7 +6,7 @@ import { getCurrentUserProfile } from '@/lib/queries/admin'
 import { confirmPayment } from '@/lib/actions/payments'
 import type { Json } from '@/types/database'
 
-type RegistrationStatus = 'draft' | 'pending' | 'paid' | 'cancelled'
+type RegistrationStatus = 'draft' | 'pending' | 'paid' | 'cancelled' | 'refunded'
 
 export async function updateRegistrationStatus(
   registrationId: string,
@@ -23,7 +23,7 @@ export async function updateRegistrationStatus(
   const supabase = createAdminClient()
   const { error } = await supabase
     .from('registrations')
-    .update({ status: newStatus })
+    .update({ status: newStatus as 'draft' | 'pending' | 'paid' | 'cancelled' })
     .eq('id', registrationId)
     .eq('organization_id', profile.organization_id)
 
