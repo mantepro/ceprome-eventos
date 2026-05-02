@@ -1,5 +1,6 @@
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import path from 'path'
+import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer'
 
 // CEPROME brand palette
 const C = {
@@ -31,12 +32,13 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flexDirection: 'column',
+    justifyContent: 'center',
   },
-  // Logo placeholder — swap for <Image> once /public/logo-ceprome.png is available:
-  // import { Image } from '@react-pdf/renderer'
-  // <Image src={path.join(process.cwd(), 'public/logo-ceprome.png')} style={styles.logo} />
-  // style={{ width: 120, height: 40 }}
-  headerLogoText: {
+  headerLogo: {
+    height: 44,
+    width: 206,  // preserves 500:106.91 aspect ratio at h=44
+  },
+  headerLogoFallback: {
     fontSize: 24,
     fontFamily: 'Helvetica-Bold',
     color: C.blanco,
@@ -201,7 +203,7 @@ export interface ComprobanteData {
   invoiceInstructions?: string | null
 }
 
-function ComprobanteDocument({ data }: { data: ComprobanteData }) {
+function ComprobanteDocument({ data, logoUri }: { data: ComprobanteData; logoUri: string | null }) {
   const formattedAmount = `$${data.amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${data.currency}`
   const isPrereg = data.docType === 'prereg'
 
@@ -212,8 +214,10 @@ function ComprobanteDocument({ data }: { data: ComprobanteData }) {
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            {/* Replace with <Image> once logo-ceprome.png is in /public */}
-            <Text style={styles.headerLogoText}>CEPROME</Text>
+            {logoUri
+              ? <Image src={logoUri} style={styles.headerLogo} />
+              : <Text style={styles.headerLogoFallback}>CEPROME</Text>
+            }
             <Text style={styles.headerTitle}>
               {isPrereg ? 'Confirmación de Pre-registro' : 'Comprobante de Inscripción'}
             </Text>
@@ -304,9 +308,25 @@ function ComprobanteDocument({ data }: { data: ComprobanteData }) {
   )
 }
 
+let _logoUri: string | null | undefined = undefined
+
+async function getLogoUri(): Promise<string | null> {
+  if (_logoUri !== undefined) return _logoUri
+  try {
+    const sharp = (await import('sharp')).default
+    const svgPath = path.join(process.cwd(), 'public/logo-ceprome.svg')
+    const png = await sharp(svgPath).resize(412, 88).png().toBuffer()
+    _logoUri = `data:image/png;base64,${png.toString('base64')}`
+  } catch {
+    _logoUri = null
+  }
+  return _logoUri
+}
+
 export async function renderComprobante(data: ComprobanteData): Promise<Buffer> {
   const { renderToBuffer } = await import('@react-pdf/renderer')
+  const logoUri = await getLogoUri()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const element = React.createElement(ComprobanteDocument, { data }) as any
+  const element = React.createElement(ComprobanteDocument, { data, logoUri }) as any
   return renderToBuffer(element) as Promise<Buffer>
 }
