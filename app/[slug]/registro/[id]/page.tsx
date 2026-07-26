@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import Image from 'next/image'
 import { getOrgBySlug, getPublishedEvent, getActiveTicketTypes, getEventFields } from '@/lib/queries/events'
 import { RegistrationForm } from '@/components/public/registration-form'
 
@@ -29,21 +31,44 @@ export default async function RegistrationPage({
   ])
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-xl">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold">{event.name}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Formulario de inscripción</p>
+    <div className="registro-form min-h-screen bg-[#f9fafb]">
+      <div className="sticky top-16 z-40 border-b bg-white">
+        <div className="container mx-auto flex h-14 items-center justify-between gap-4 px-4">
+          <div className="relative h-7 w-28 shrink-0">
+            {org.logo_url ? (
+              <Image
+                src={org.logo_url}
+                alt={org.name}
+                fill
+                className="object-contain object-left"
+                sizes="112px"
+              />
+            ) : (
+              <span className="text-sm font-semibold text-foreground">{org.name}</span>
+            )}
+          </div>
+          <p className="truncate text-sm text-muted-foreground">{event.name}</p>
+          <Link
+            href={`/${slug}/eventos/${event.id}`}
+            className="shrink-0 text-sm font-medium text-[#a22944] hover:underline"
+          >
+            Guardar y salir
+          </Link>
+        </div>
       </div>
-      <RegistrationForm
-        event={event}
-        ticketTypes={ticketTypes}
-        orgSlug={slug}
-        orgId={org.id}
-        preselectedTypeId={tipo}
-        preselectedPayment={prereg === '1' ? 'preregister' : undefined}
-        eventFields={eventFields}
-        allowPreregistration={event.allow_preregistration}
-      />
+
+      <div className="px-4 py-10">
+        <RegistrationForm
+          event={event}
+          ticketTypes={ticketTypes}
+          orgSlug={slug}
+          orgId={org.id}
+          preselectedTypeId={tipo}
+          preselectedPayment={prereg === '1' ? 'preregister' : undefined}
+          eventFields={eventFields}
+          allowPreregistration={event.allow_preregistration}
+        />
+      </div>
     </div>
   )
 }

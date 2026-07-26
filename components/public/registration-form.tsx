@@ -4,7 +4,9 @@ import { useState, useTransition } from 'react'
 import PhoneInput from 'react-phone-number-input'
 import type { E164Number, CountryCode } from 'libphonenumber-js/core'
 import 'react-phone-number-input/style.css'
+import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,9 +17,22 @@ import { COUNTRY_NAME_TO_ISO } from '@/lib/data/country-codes'
 import type { Event, TicketType, EventField } from '@/types/database'
 
 type Step = 1 | 2 | 3 | 4
+type Bubble = 1 | 2 | 3
 
-const NORMAL_STEPS = ['Datos', 'Inscripción', 'Pago', 'Resumen']
-const PREREG_STEPS = ['Datos', 'Inscripción', 'Confirmación']
+const STEPS = ['Datos personales', 'Acceso y pago', 'Congreso']
+
+const STEP_COPY: Record<Step, { title: string; subtitle: string }> = {
+  1: { title: 'Datos personales', subtitle: 'Cuéntanos quién eres para generar tu inscripción.' },
+  2: { title: 'Tipo de acceso', subtitle: 'Elige el pase con el que asistirás al congreso.' },
+  3: { title: 'Método de pago', subtitle: 'Elige cómo quieres completar tu pago.' },
+  4: { title: 'Revisa tu inscripción', subtitle: 'Confirma que todo esté correcto antes de continuar.' },
+}
+
+function toBubble(step: Step): Bubble {
+  if (step === 1) return 1
+  if (step === 4) return 3
+  return 2
+}
 
 interface Props {
   event: Event
@@ -61,8 +76,8 @@ export function RegistrationForm({
   const [isPending, startTransition] = useTransition()
 
   const selectedType = ticketTypes.find((t) => t.id === selectedTypeId)
-  const displaySteps = isPreregFlow ? PREREG_STEPS : NORMAL_STEPS
-  const displayStep = isPreregFlow && step === 4 ? 3 : step
+  const currentBubble = toBubble(step)
+  const stepCopy = STEP_COPY[step]
 
   const paymentOptions = [
     {
@@ -184,16 +199,22 @@ export function RegistrationForm({
       : ''
 
   return (
-    <div>
-      <StepIndicator current={displayStep as Step} steps={displaySteps} />
+    <div className="mx-auto max-w-[480px]">
+      <StepIndicator current={currentBubble} />
 
-      {error && (
-        <div className="mb-4 rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-          {error}
+      <div className="rounded-lg border bg-white p-6 sm:p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">{stepCopy.title}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{stepCopy.subtitle}</p>
         </div>
-      )}
 
-      {step === 1 && (
+        {error && (
+          <div className="mb-4 rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        {step === 1 && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -271,7 +292,6 @@ export function RegistrationForm({
 
       {step === 2 && (
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground mb-4">Selecciona tu tipo de inscripción:</p>
           {ticketTypes.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
               No hay tipos de inscripción disponibles.
@@ -288,18 +308,21 @@ export function RegistrationForm({
                 onClick={() => !isSoldOut && handleSelectType(tt.id)}
                 className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
                   isSelected
-                    ? 'border-primary bg-primary/5'
+                    ? 'border-[#a22944] bg-[#a22944]/5'
                     : isSoldOut
                     ? 'border-muted opacity-50 cursor-not-allowed'
-                    : 'border-border hover:border-primary/50'
+                    : 'border-border hover:border-[#a22944]/50'
                 }`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-medium">{tt.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Acceso completo a todas las actividades del congreso.
+                    </p>
                     {isSoldOut && <p className="text-xs text-muted-foreground mt-0.5">Agotado</p>}
                   </div>
-                  <p className="font-bold text-right">
+                  <p className="text-xl font-bold text-right shrink-0">
                     ${tt.price.toLocaleString()}{' '}
                     <span className="text-sm font-normal text-muted-foreground">{tt.currency}</span>
                   </p>
@@ -352,7 +375,6 @@ export function RegistrationForm({
 
       {step === 3 && !isPreregFlow && (
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground mb-4">Selecciona cómo realizarás tu pago:</p>
           {paymentOptions.map((opt) => (
             <button
               key={opt.value}
@@ -360,11 +382,19 @@ export function RegistrationForm({
               onClick={() => setPaymentMethod(opt.value)}
               className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
                 paymentMethod === opt.value
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
+                  ? 'border-[#a22944] bg-[#a22944]/5'
+                  : 'border-border hover:border-[#a22944]/50'
               }`}
             >
-              <p className="font-medium">{opt.label}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{opt.label}</p>
+                {opt.value === 'online' && (
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">INMEDIATO</Badge>
+                )}
+                {opt.value === 'manual' && (
+                  <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">48 H</Badge>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
             </button>
           ))}
@@ -434,23 +464,35 @@ export function RegistrationForm({
         </div>
       )}
 
-      <div className={`flex mt-6 gap-3 ${step > 1 ? 'justify-between' : 'justify-end'}`}>
-        {step > 1 && (
-          <Button variant="outline" onClick={handleBack} disabled={isPending}>
-            Atrás
-          </Button>
-        )}
-        {step < 4 ? (
-          <Button onClick={handleNext}>Continuar</Button>
-        ) : (
-          <Button onClick={handleSubmit} disabled={isPending}>
-            {isPending
-              ? 'Procesando...'
-              : isPreregFlow
-              ? 'Confirmar pre-registro'
-              : 'Confirmar inscripción'}
-          </Button>
-        )}
+        <div className={`flex items-center mt-6 gap-3 ${step > 1 ? 'justify-between' : 'justify-end'}`}>
+          {step > 1 && (
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={handleBack} disabled={isPending}>
+                Atrás
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Paso {currentBubble} de {STEPS.length}
+              </span>
+            </div>
+          )}
+          {step < 4 ? (
+            <Button onClick={handleNext} className="bg-[#a22944] text-white hover:bg-[#8a2239]">
+              Continuar
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={isPending}
+              className="bg-[#a22944] text-white hover:bg-[#8a2239]"
+            >
+              {isPending
+                ? 'Procesando...'
+                : isPreregFlow
+                ? 'Confirmar pre-registro'
+                : 'Confirmar inscripción'}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -580,31 +622,36 @@ function ExtraField({
   )
 }
 
-function StepIndicator({ current, steps }: { current: Step; steps: string[] }) {
+function StepIndicator({ current }: { current: Bubble }) {
   return (
-    <div className="flex items-center justify-center gap-8 mb-8">
-      {steps.map((label, i) => {
-        const n = (i + 1) as Step
+    <div className="flex items-center justify-center mb-8">
+      {STEPS.map((label, i) => {
+        const n = (i + 1) as Bubble
         const isActive = current === n
         const isDone = current > n
         return (
-          <div key={label} className="flex flex-col items-center gap-1.5 w-16">
-            <div
-              className={`h-8 w-8 shrink-0 rounded-full inline-flex items-center justify-center text-sm font-semibold leading-none border-2 transition-colors ${
-                isDone
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : isActive
-                  ? 'border-primary text-primary'
-                  : 'border-muted-foreground/30 text-muted-foreground'
-              }`}
-            >
-              {isDone ? '✓' : n}
+          <div key={label} className="flex items-center">
+            <div className="flex flex-col items-center gap-1.5 w-20">
+              <div
+                className={`h-8 w-8 shrink-0 rounded-full inline-flex items-center justify-center text-sm font-semibold leading-none border-2 transition-colors ${
+                  isDone || isActive
+                    ? 'bg-[#a22944] border-[#a22944] text-white'
+                    : 'border-muted-foreground/30 text-muted-foreground'
+                }`}
+              >
+                {isDone ? <Check className="h-4 w-4" /> : n}
+              </div>
+              <span
+                className={`text-xs text-center leading-tight ${isActive ? 'text-[#a22944] font-medium' : 'text-muted-foreground'}`}
+              >
+                {label}
+              </span>
             </div>
-            <span
-              className={`text-xs text-center leading-tight ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}
-            >
-              {label}
-            </span>
+            {i < STEPS.length - 1 && (
+              <div
+                className={`h-0.5 w-8 sm:w-12 -mt-5 ${isDone ? 'bg-[#a22944]' : 'bg-muted-foreground/30'}`}
+              />
+            )}
           </div>
         )
       })}

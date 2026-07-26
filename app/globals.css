@@ -134,6 +134,12 @@
   font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Focus ring guinda CEPROME solo en el formulario de registro — shadowea
+   --ring localmente, no toca el tema global (admin usa el --ring por defecto) */
+.registro-form {
+  --ring: #a22944;
+}
+
 /* react-phone-number-input */
 .PhoneInput {
   display: flex;
