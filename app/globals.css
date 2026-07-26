@@ -131,7 +131,7 @@
 
 /* Tipografía del sitio público (rutas /[slug]/*) — no afecta /admin */
 .font-public-site {
-  font-family: var(--font-jakarta), var(--font-sans);
+  font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* react-phone-number-input */

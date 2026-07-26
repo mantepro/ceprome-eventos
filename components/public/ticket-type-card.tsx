@@ -76,7 +76,15 @@ export function TicketTypeCard({
       <CardFooter className="flex flex-col gap-2">
         {available ? (
           <>
-            <Button asChild className="w-full" variant={primary ? 'default' : 'outline'}>
+            <Button
+              asChild
+              variant={primary ? 'default' : 'outline'}
+              className={
+                primary
+                  ? 'w-full bg-[#a22944] text-white hover:bg-[#8a2239]'
+                  : 'w-full border-[#a22944] text-[#a22944] hover:bg-[#a22944]/10 hover:text-[#a22944]'
+              }
+            >
               <Link href={base}>Elegir este acceso</Link>
             </Button>
             {allowPreregistration && (
