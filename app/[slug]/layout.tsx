@@ -21,13 +21,15 @@ export default async function PublicLayout({
         <div className="container mx-auto flex h-16 items-center px-4">
           <Link href={`/${slug}/eventos`} className="flex items-center gap-2.5">
             {org.logo_url ? (
-              <Image
-                src={org.logo_url}
-                alt={org.name}
-                width={140}
-                height={36}
-                className="h-9 w-auto object-contain"
-              />
+              <div className="relative h-10 w-40">
+                <Image
+                  src={org.logo_url}
+                  alt={org.name}
+                  fill
+                  className="object-contain object-left"
+                  sizes="160px"
+                />
+              </div>
             ) : (
               <span className="font-semibold text-foreground">{org.name}</span>
             )}
