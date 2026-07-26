@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import { getOrgBySlug } from '@/lib/queries/events'
+
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' })
 
 export default async function PublicLayout({
   children,
@@ -13,7 +16,7 @@ export default async function PublicLayout({
   const org = await getOrgBySlug(slug)
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`${jakarta.variable} font-public-site min-h-screen bg-background`}>
       <header className="sticky top-0 z-10 border-b bg-white">
         <div className="container mx-auto flex h-16 items-center px-4">
           <Link href={`/${slug}/eventos`} className="flex items-center gap-2.5">
