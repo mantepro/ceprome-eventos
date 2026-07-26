@@ -65,8 +65,15 @@ async function uploadCover(
 
     const ext = isPng ? 'png' : isWebp ? 'webp' : 'jpg'
     const contentType = isPng ? 'image/png' : isWebp ? 'image/webp' : 'image/jpeg'
-    const path = `${orgId}/${eventId}/cover.${ext}`
+    const path = `${orgId}/${eventId}/cover-${Date.now()}.${ext}`
     const admin = createAdminClient()
+
+    const { data: existing } = await admin.storage.from('covers').list(`${orgId}/${eventId}`)
+    if (existing?.length) {
+      await admin.storage
+        .from('covers')
+        .remove(existing.map((f) => `${orgId}/${eventId}/${f.name}`))
+    }
 
     const { error } = await admin.storage
       .from('covers')
