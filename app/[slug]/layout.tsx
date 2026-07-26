@@ -17,7 +17,7 @@ export default async function PublicLayout({
 
   return (
     <div className={`${jakarta.variable} font-public-site min-h-screen bg-background`}>
-      <header className="sticky top-0 z-10 border-b bg-white">
+      <header className="sticky top-0 z-50 border-b bg-white">
         <div className="container mx-auto flex h-16 items-center px-4">
           <Link href={`/${slug}/eventos`} className="flex items-center gap-2.5">
             {org.logo_url ? (
@@ -45,7 +45,7 @@ export default async function PublicLayout({
               alt={org.name}
               width={120}
               height={32}
-              className="h-8 w-auto object-contain"
+              className="h-8 w-auto object-contain brightness-0 invert"
             />
           ) : (
             <span className="font-semibold">{org.name}</span>
