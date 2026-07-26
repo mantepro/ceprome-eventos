@@ -78,6 +78,8 @@ export function RegistrationForm({
   const selectedType = ticketTypes.find((t) => t.id === selectedTypeId)
   const currentBubble = toBubble(step)
   const stepCopy = STEP_COPY[step]
+  const countryField = eventFields.find((f) => f.field_type === 'country')
+  const otherFields = eventFields.filter((f) => f.id !== countryField?.id)
 
   const paymentOptions = [
     {
@@ -120,6 +122,14 @@ export function RegistrationForm({
       }
     }
     return null
+  }
+
+  function handleExtraFieldChange(field: EventField, val: string | boolean) {
+    setExtraData((prev) => ({ ...prev, [field.id]: val }))
+    if (field.field_type === 'country' && typeof val === 'string' && val) {
+      const iso = COUNTRY_NAME_TO_ISO[val]
+      if (iso) setPhoneCountry(iso as CountryCode)
+    }
   }
 
   function handleSelectType(id: string) {
@@ -199,7 +209,7 @@ export function RegistrationForm({
       : ''
 
   return (
-    <div className="mx-auto max-w-[480px]">
+    <div className="mx-auto max-w-2xl">
       <StepIndicator current={currentBubble} />
 
       <div className="rounded-lg border bg-white p-6 sm:p-8">
@@ -257,32 +267,35 @@ export function RegistrationForm({
               placeholder=""
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">Teléfono</Label>
-            <PhoneInput
-              id="phone"
-              country={phoneCountry}
-              onCountryChange={(c) => setPhoneCountry(c ?? 'MX')}
-              value={phone}
-              onChange={setPhone}
-              numberInputProps={{ maxLength: 15 }}
-            />
+          <div className={countryField ? 'grid gap-4 sm:grid-cols-2' : ''}>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Teléfono</Label>
+              <PhoneInput
+                id="phone"
+                country={phoneCountry}
+                onCountryChange={(c) => setPhoneCountry(c ?? 'MX')}
+                value={phone}
+                onChange={setPhone}
+                numberInputProps={{ maxLength: 15 }}
+              />
+            </div>
+            {countryField && (
+              <ExtraField
+                field={countryField}
+                value={extraData[countryField.id]}
+                onChange={(val) => handleExtraFieldChange(countryField, val)}
+              />
+            )}
           </div>
 
-          {eventFields.length > 0 && (
+          {otherFields.length > 0 && (
             <div className="space-y-4 pt-2 border-t">
-              {eventFields.map((field) => (
+              {otherFields.map((field) => (
                 <ExtraField
                   key={field.id}
                   field={field}
                   value={extraData[field.id]}
-                  onChange={(val) => {
-                    setExtraData((prev) => ({ ...prev, [field.id]: val }))
-                    if (field.field_type === 'country' && typeof val === 'string' && val) {
-                      const iso = COUNTRY_NAME_TO_ISO[val]
-                      if (iso) setPhoneCountry(iso as CountryCode)
-                    }
-                  }}
+                  onChange={(val) => handleExtraFieldChange(field, val)}
                 />
               ))}
             </div>
