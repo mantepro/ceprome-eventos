@@ -32,7 +32,7 @@ export default async function RegistrationPage({
 
   return (
     <div className="registro-form min-h-screen bg-[#f9fafb]">
-      <div className="sticky top-16 z-40 border-b bg-white">
+      <div className="sticky top-0 z-40 border-b bg-white">
         <div className="container mx-auto flex h-14 items-center justify-between gap-4 px-4">
           <div className="relative h-7 w-28 shrink-0">
             {org.logo_url ? (
