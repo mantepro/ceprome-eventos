@@ -1,11 +1,10 @@
-import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Calendar, MapPin, Globe } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+import { Calendar, MapPin, Globe, Building2, Hotel, Mail, Phone } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { getOrgBySlug, getPublishedEvent, getActiveTicketTypes } from '@/lib/queries/events'
 import { TicketTypeCard } from '@/components/public/ticket-type-card'
-import { capitalize, formatDate, formatTime } from '@/lib/format'
+import { CountdownTimer } from '@/components/public/countdown-timer'
+import { capitalize, formatDate } from '@/lib/format'
 import type { Event } from '@/types/database'
 
 const MODALITY_LABEL: Record<Event['modality'], string> = {
@@ -36,101 +35,134 @@ export default async function EventDetailPage({ params }: { params: Params }) {
 
   return (
     <div>
-      {/* Cover hero */}
-      <div className="relative h-56 md:h-72 bg-gradient-to-br from-primary/30 to-primary/10 overflow-hidden">
-        {event.cover_url && (
-          <Image
-            src={event.cover_url}
-            alt={event.name}
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <Badge variant="secondary" className="mb-2">
-            {MODALITY_LABEL[event.modality]}
-          </Badge>
-          <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-            {event.name}
-          </h1>
-        </div>
-      </div>
+      {/* Hero */}
+      <section className="grid md:grid-cols-2">
+        <div className="flex flex-col justify-center gap-6 bg-[#a22944] px-6 py-14 text-white md:px-12 md:py-20 lg:px-16">
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/80 md:text-sm">
+            VI Congreso Latinoamericano
+          </p>
+          <h1 className="text-3xl font-bold leading-tight md:text-5xl">{event.name}</h1>
 
-      <div className="container mx-auto px-4 py-6">
-        <Link
-          href={`/${slug}/eventos`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Todos los eventos
-        </Link>
-
-        <div className="grid gap-8 md:grid-cols-3">
-          {/* Info principal */}
-          <div className="md:col-span-2 space-y-5">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span>{capitalize(formatDate(event.starts_at))}</span>
-                <span className="text-muted-foreground">·</span>
-                <span className="text-muted-foreground">{formatTime(event.starts_at)}</span>
+          <div className="space-y-1.5 text-sm text-white/90">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 shrink-0" />
+              <span>{capitalize(formatDate(event.starts_at))}</span>
+            </div>
+            {event.location && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span>{event.location}</span>
               </div>
-              {event.ends_at && (
-                <p className="text-sm text-muted-foreground pl-6">
-                  Hasta el {capitalize(formatDate(event.ends_at))}
+            )}
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 shrink-0" />
+              <span>{MODALITY_LABEL[event.modality]}</span>
+            </div>
+          </div>
+
+          {event.description && (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/90 md:text-base">
+              {event.description}
+            </p>
+          )}
+
+          <div>
+            <Button asChild size="lg" className="bg-white text-[#a22944] hover:bg-white/90">
+              <a href="#tipos-de-acceso">Registrarme al congreso</a>
+            </Button>
+          </div>
+
+          <CountdownTimer targetDate={event.starts_at} />
+        </div>
+
+        <div className="relative min-h-[260px] bg-muted md:min-h-0">
+          {event.cover_url ? (
+            <Image
+              src={event.cover_url}
+              alt={event.name}
+              fill
+              className="object-cover"
+              priority
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+          ) : (
+            <div className="flex h-full min-h-[260px] items-center justify-center bg-gray-200">
+              <span className="text-sm font-medium uppercase tracking-widest text-gray-400">
+                Fotografía real
+              </span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Tipos de acceso */}
+      <section id="tipos-de-acceso" className="container mx-auto px-4 py-12 md:py-16">
+        <h2 className="mb-6 text-2xl font-bold">Tipos de acceso</h2>
+        {ticketTypes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No hay tipos de inscripción disponibles en este momento.
+          </p>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2">
+            {ticketTypes.map((tt, i) => (
+              <TicketTypeCard
+                key={tt.id}
+                ticketType={tt}
+                orgSlug={slug}
+                eventId={event.id}
+                allowPreregistration={event.allow_preregistration}
+                primary={i === 0}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Información práctica */}
+      <section className="bg-muted/40 py-12 md:py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="mb-8 text-2xl font-bold">Información práctica</h2>
+          <div className="grid gap-8 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Building2 className="h-5 w-5 text-[#a22944]" />
+              <h3 className="font-semibold">Sede</h3>
+              <p className="text-sm text-muted-foreground">
+                {event.location ?? 'Por confirmar'}
+              </p>
+              <p className="text-sm text-muted-foreground">{MODALITY_LABEL[event.modality]}</p>
+            </div>
+            <div className="space-y-2">
+              <Hotel className="h-5 w-5 text-[#a22944]" />
+              <h3 className="font-semibold">Hospedaje</h3>
+              <p className="text-sm text-muted-foreground">
+                Información sobre hoteles recomendados y tarifas preferenciales próximamente.
+                Contacta al comité organizador si necesitas recomendaciones anticipadas.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Mail className="h-5 w-5 text-[#a22944]" />
+              <h3 className="font-semibold">Contacto</h3>
+              {org.email && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  <span>{org.email}</span>
                 </p>
               )}
-              {event.location && (
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span>{event.location}</span>
-                </div>
+              {org.phone && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5 shrink-0" />
+                  <span>{org.phone}</span>
+                </p>
               )}
-              {event.modality !== 'presencial' && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span>{MODALITY_LABEL[event.modality]}</span>
-                </div>
+              {!org.email && !org.phone && (
+                <p className="text-sm text-muted-foreground">
+                  Contacto disponible próximamente.
+                </p>
               )}
             </div>
-
-            {event.description && (
-              <>
-                <Separator />
-                <div>
-                  <h2 className="font-semibold mb-2">Acerca del evento</h2>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                    {event.description}
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Tipos de inscripción */}
-          <div className="space-y-4">
-            <h2 className="font-semibold">Inscripción</h2>
-            {ticketTypes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No hay tipos de inscripción disponibles en este momento.
-              </p>
-            ) : (
-              ticketTypes.map((tt) => (
-                <TicketTypeCard
-                  key={tt.id}
-                  ticketType={tt}
-                  orgSlug={slug}
-                  eventId={event.id}
-                  allowPreregistration={event.allow_preregistration}
-                />
-              ))
-            )}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

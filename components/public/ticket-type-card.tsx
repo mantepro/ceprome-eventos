@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +11,14 @@ interface Props {
   orgSlug: string
   eventId: string
   allowPreregistration?: boolean
+  primary?: boolean
 }
+
+const INCLUDED_BENEFITS = [
+  'Acceso a todas las conferencias y simposios',
+  'Kit de inscripción',
+  'Constancia de participación',
+]
 
 function getAvailability(tt: TicketType): { label: string; urgent: boolean; available: boolean } {
   if (tt.capacity === null) return { label: 'Disponible', urgent: false, available: true }
@@ -20,7 +28,13 @@ function getAvailability(tt: TicketType): { label: string; urgent: boolean; avai
   return { label: 'Disponible', urgent: false, available: true }
 }
 
-export function TicketTypeCard({ ticketType, orgSlug, eventId, allowPreregistration = false }: Props) {
+export function TicketTypeCard({
+  ticketType,
+  orgSlug,
+  eventId,
+  allowPreregistration = false,
+  primary = false,
+}: Props) {
   const { label, urgent, available } = getAvailability(ticketType)
   const base = `/${orgSlug}/registro/${eventId}?tipo=${ticketType.id}`
 
@@ -28,31 +42,45 @@ export function TicketTypeCard({ ticketType, orgSlug, eventId, allowPreregistrat
     <Card className={!available ? 'opacity-60' : ''}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base font-semibold">{ticketType.name}</CardTitle>
-          <Badge
-            variant={urgent ? 'destructive' : available ? 'outline' : 'secondary'}
-            className="text-xs shrink-0"
-          >
-            {label}
-          </Badge>
+          <CardTitle className="text-lg font-semibold">{ticketType.name}</CardTitle>
+          {urgent && (
+            <Badge variant="destructive" className="text-xs shrink-0">
+              {label}
+            </Badge>
+          )}
+          {!available && (
+            <Badge variant="secondary" className="text-xs shrink-0">
+              {label}
+            </Badge>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="pb-3">
-        <p className="text-3xl font-bold tracking-tight">
-          {ticketType.price === 0
-            ? 'Gratuito'
-            : formatPrice(ticketType.price, ticketType.currency)}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">{ticketType.currency}</p>
+      <CardContent className="space-y-4 pb-3">
+        <div>
+          <p className="text-3xl font-bold tracking-tight">
+            {ticketType.price === 0
+              ? 'Gratuito'
+              : formatPrice(ticketType.price, ticketType.currency)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">{ticketType.currency}</p>
+        </div>
+        <ul className="space-y-2">
+          {INCLUDED_BENEFITS.map((benefit) => (
+            <li key={benefit} className="flex items-start gap-2 text-sm">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#a22944]" />
+              <span>{benefit}</span>
+            </li>
+          ))}
+        </ul>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
         {available ? (
           <>
-            <Button asChild className="w-full">
-              <Link href={base}>Registrarme y pagar</Link>
+            <Button asChild className="w-full" variant={primary ? 'default' : 'outline'}>
+              <Link href={base}>Elegir este acceso</Link>
             </Button>
             {allowPreregistration && (
-              <Button asChild variant="outline" className="w-full">
+              <Button asChild variant="ghost" className="w-full">
                 <Link href={`${base}&prereg=1`}>Pre-registrarme</Link>
               </Button>
             )}
