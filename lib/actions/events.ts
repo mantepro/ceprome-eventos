@@ -5,7 +5,33 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentUserProfile } from '@/lib/queries/admin'
+import { getCurrentUserProfile, getOrganizationSlug } from '@/lib/queries/admin'
+import { slugify } from '@/lib/slugify'
+
+const slugSchema = z
+  .string()
+  .min(1, 'Requerido.')
+  .regex(/^[a-z0-9-]+$/, 'Solo minúsculas, números y guiones.')
+
+async function uniqueEventSlug(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  baseSlug: string
+): Promise<string> {
+  let candidate = baseSlug
+  let suffix = 2
+  for (;;) {
+    const { data } = await supabase
+      .from('events')
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('slug', candidate)
+      .maybeSingle()
+    if (!data) return candidate
+    candidate = `${baseSlug}-${suffix}`
+    suffix++
+  }
+}
 
 export type EventFormState = {
   error?: string
@@ -111,6 +137,7 @@ export async function createEvent(
   const { name, description, location, starts_at, ends_at, modality, status, allow_preregistration, invoice_instructions, transfer_instructions } = parsed.data
   const supabase = await createClient()
   const eventId = crypto.randomUUID()
+  const slug = await uniqueEventSlug(supabase, profile.organization_id, slugify(name) || 'evento')
 
   const { error } = await supabase
     .from('events')
@@ -118,6 +145,7 @@ export async function createEvent(
       id: eventId,
       organization_id: profile.organization_id,
       name,
+      slug,
       description: description ?? null,
       location: location ?? null,
       starts_at: new Date(starts_at).toISOString(),
@@ -144,15 +172,37 @@ export async function updateEvent(
   if (!profile) return { error: 'No autorizado.' }
 
   const parsed = eventSchema.safeParse(parseFormData(formData))
-  if (!parsed.success) {
-    return {
-      errors: Object.fromEntries(
-        Object.entries(parsed.error.flatten().fieldErrors).map(([k, v]) => [k, v?.[0] ?? ''])
-      ),
+  const slugRaw = ((formData.get('slug') as string) ?? '').trim().toLowerCase()
+  const slugParsed = slugSchema.safeParse(slugRaw)
+
+  if (!parsed.success || !slugParsed.success) {
+    const errors: Record<string, string> = parsed.success
+      ? {}
+      : Object.fromEntries(
+          Object.entries(parsed.error.flatten().fieldErrors).map(([k, v]) => [k, v?.[0] ?? ''])
+        )
+    if (!slugParsed.success) {
+      errors.slug = slugParsed.error.issues[0]?.message ?? 'URL inválida.'
     }
+    return { errors }
   }
 
+  const slug = slugParsed.data
   const { name, description, location, starts_at, ends_at, modality, status, allow_preregistration, invoice_instructions, transfer_instructions } = parsed.data
+
+  const supabase = await createClient()
+
+  const { data: slugCollision } = await supabase
+    .from('events')
+    .select('id')
+    .eq('organization_id', profile.organization_id)
+    .eq('slug', slug)
+    .neq('id', eventId)
+    .maybeSingle()
+
+  if (slugCollision) {
+    return { errors: { slug: 'Esta URL ya está en uso por otro evento.' } }
+  }
 
   // Handle cover image upload
   const coverFile = formData.get('cover')
@@ -166,11 +216,11 @@ export async function updateEvent(
     coverUrl = url
   }
 
-  const supabase = await createClient()
   const { error } = await supabase
     .from('events')
     .update({
       name,
+      slug,
       description: description ?? null,
       location: location ?? null,
       starts_at: new Date(starts_at).toISOString(),
@@ -185,10 +235,23 @@ export async function updateEvent(
     .eq('id', eventId)
     .eq('organization_id', profile.organization_id)
 
-  if (error) return { error: 'Error al guardar los cambios.' }
+  if (error) {
+    if (error.code === '23505') {
+      return { errors: { slug: 'Esta URL ya está en uso por otro evento.' } }
+    }
+    return { error: 'Error al guardar los cambios.' }
+  }
 
   revalidatePath('/admin/eventos')
   revalidatePath(`/admin/eventos/${eventId}/editar`)
+
+  const orgSlug = await getOrganizationSlug(profile.organization_id)
+  if (orgSlug) {
+    revalidatePath(`/${orgSlug}/eventos`)
+    revalidatePath(`/${orgSlug}/eventos/${slug}`)
+    revalidatePath(`/${orgSlug}/registro/${slug}`)
+  }
+
   return { success: true }
 }
 

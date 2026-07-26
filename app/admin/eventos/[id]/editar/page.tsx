@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
-import { getCurrentUserProfile, getEventById, getEventTicketTypes, getAdminEventFields } from '@/lib/queries/admin'
+import { getCurrentUserProfile, getEventById, getEventTicketTypes, getAdminEventFields, getOrganizationSlug } from '@/lib/queries/admin'
 import { updateEvent } from '@/lib/actions/events'
 import { EventForm } from '@/components/admin/event-form'
 import { TicketTypeSection } from '@/components/admin/ticket-type-section'
@@ -20,10 +20,11 @@ export default async function EditarEventoPage({ params }: { params: Params }) {
   const profile = await getCurrentUserProfile()
   if (!profile) return null
 
-  const [event, ticketTypes, eventFields] = await Promise.all([
+  const [event, ticketTypes, eventFields, orgSlug] = await Promise.all([
     getEventById(id, profile.organization_id),
     getEventTicketTypes(id, profile.organization_id),
     getAdminEventFields(id, profile.organization_id),
+    getOrganizationSlug(profile.organization_id),
   ])
 
   if (!event) notFound()
@@ -56,6 +57,7 @@ export default async function EditarEventoPage({ params }: { params: Params }) {
         <EventForm
           action={updateEventWithId}
           defaultValues={event}
+          orgSlug={orgSlug ?? undefined}
           submitLabel="Guardar cambios"
         />
       </div>

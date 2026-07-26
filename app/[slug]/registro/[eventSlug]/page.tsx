@@ -1,16 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getOrgBySlug, getPublishedEvent, getActiveTicketTypes, getEventFields } from '@/lib/queries/events'
+import { getOrgBySlug, getPublishedEventBySlug, getActiveTicketTypes, getEventFields } from '@/lib/queries/events'
 import { RegistrationForm } from '@/components/public/registration-form'
 
-type Params = Promise<{ slug: string; id: string }>
+type Params = Promise<{ slug: string; eventSlug: string }>
 type SearchParams = Promise<{ tipo?: string; prereg?: string }>
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { slug, id } = await params
+  const { slug, eventSlug } = await params
   const org = await getOrgBySlug(slug)
-  const event = await getPublishedEvent(org.id, id)
+  const event = await getPublishedEventBySlug(org.id, eventSlug)
   return { title: `Registro — ${event.name}` }
 }
 
@@ -21,13 +21,14 @@ export default async function RegistrationPage({
   params: Params
   searchParams: SearchParams
 }) {
-  const { slug, id } = await params
+  const { slug, eventSlug } = await params
   const { tipo, prereg } = await searchParams
   const org = await getOrgBySlug(slug)
-  const [event, ticketTypes, eventFields] = await Promise.all([
-    getPublishedEvent(org.id, id),
-    getActiveTicketTypes(id),
-    getEventFields(id),
+  const event = await getPublishedEventBySlug(org.id, eventSlug)
+  // A partir de aquí todo usa event.id (UUID real) — el slug es solo para la URL
+  const [ticketTypes, eventFields] = await Promise.all([
+    getActiveTicketTypes(event.id),
+    getEventFields(event.id),
   ])
 
   return (
@@ -49,7 +50,7 @@ export default async function RegistrationPage({
           </div>
           <p className="truncate text-sm text-muted-foreground">{event.name}</p>
           <Link
-            href={`/${slug}/eventos/${event.id}`}
+            href={`/${slug}/eventos/${eventSlug}`}
             className="shrink-0 text-sm font-medium text-[#a22944] hover:underline"
           >
             Guardar y salir

@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import { Calendar, MapPin, Globe, Building2, Hotel, Mail, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { getOrgBySlug, getPublishedEvent, getActiveTicketTypes } from '@/lib/queries/events'
+import { getOrgBySlug, getPublishedEventBySlug, getActiveTicketTypes } from '@/lib/queries/events'
 import { TicketTypeCard } from '@/components/public/ticket-type-card'
 import { CountdownTimer } from '@/components/public/countdown-timer'
 import { capitalize, formatDate } from '@/lib/format'
@@ -13,12 +13,12 @@ const MODALITY_LABEL: Record<Event['modality'], string> = {
   hibrido: 'Híbrido',
 }
 
-type Params = Promise<{ slug: string; id: string }>
+type Params = Promise<{ slug: string; eventSlug: string }>
 
 export async function generateMetadata({ params }: { params: Params }) {
-  const { slug, id } = await params
+  const { slug, eventSlug } = await params
   const org = await getOrgBySlug(slug)
-  const event = await getPublishedEvent(org.id, id)
+  const event = await getPublishedEventBySlug(org.id, eventSlug)
   return {
     title: `${event.name} — ${org.name}`,
     description: event.description ?? undefined,
@@ -26,12 +26,10 @@ export async function generateMetadata({ params }: { params: Params }) {
 }
 
 export default async function EventDetailPage({ params }: { params: Params }) {
-  const { slug, id } = await params
+  const { slug, eventSlug } = await params
   const org = await getOrgBySlug(slug)
-  const [event, ticketTypes] = await Promise.all([
-    getPublishedEvent(org.id, id),
-    getActiveTicketTypes(id),
-  ])
+  const event = await getPublishedEventBySlug(org.id, eventSlug)
+  const ticketTypes = await getActiveTicketTypes(event.id)
 
   return (
     <div>
@@ -109,7 +107,7 @@ export default async function EventDetailPage({ params }: { params: Params }) {
                 key={tt.id}
                 ticketType={tt}
                 orgSlug={slug}
-                eventId={event.id}
+                eventSlug={eventSlug}
                 allowPreregistration={event.allow_preregistration}
                 primary={i === 0}
               />

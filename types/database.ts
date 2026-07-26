@@ -34,6 +34,7 @@ export interface Database {
           id: string
           organization_id: string
           name: string
+          slug: string
           description: string | null
           location: string | null
           starts_at: string
@@ -50,6 +51,7 @@ export interface Database {
           id?: string
           organization_id: string
           name: string
+          slug: string
           description?: string | null
           location?: string | null
           starts_at: string

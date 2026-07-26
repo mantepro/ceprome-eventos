@@ -13,6 +13,7 @@ import type { AdminEventDetail } from '@/lib/queries/admin'
 type Props = {
   action: (prev: EventFormState, formData: FormData) => Promise<EventFormState>
   defaultValues?: AdminEventDetail
+  orgSlug?: string
   submitLabel?: string
 }
 
@@ -21,8 +22,9 @@ function toDatetimeLocal(iso: string | null | undefined): string {
   return iso.slice(0, 16)
 }
 
-export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Props) {
+export function EventForm({ action, defaultValues, orgSlug, submitLabel = 'Guardar' }: Props) {
   const [state, formAction, pending] = useActionState(action, {})
+  const [slug, setSlug] = useState(defaultValues?.slug ?? '')
 
   return (
     <form action={formAction} className="space-y-5">
@@ -45,6 +47,22 @@ export function EventForm({ action, defaultValues, submitLabel = 'Guardar' }: Pr
           required
         />
       </Field>
+
+      {defaultValues && (
+        <Field label="URL amigable *" error={state.errors?.slug}>
+          <Input
+            name="slug"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value.toLowerCase())}
+            placeholder="vi-congreso-2027"
+            pattern="[a-z0-9-]+"
+            required
+          />
+          <p className="text-xs text-muted-foreground mt-1 break-all">
+            registro.cepromelat.com/{orgSlug ?? '{org}'}/eventos/{slug || '{url-amigable}'}
+          </p>
+        </Field>
+      )}
 
       <Field label="Descripción" error={state.errors?.description}>
         <Textarea

@@ -28,12 +28,12 @@ export async function getPublishedEvents(orgId: string): Promise<Event[]> {
   return data ?? []
 }
 
-export async function getPublishedEvent(orgId: string, eventId: string): Promise<Event> {
+export async function getPublishedEventBySlug(orgId: string, slug: string): Promise<Event> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('events')
     .select('*')
-    .eq('id', eventId)
+    .eq('slug', slug)
     .eq('organization_id', orgId)
     .eq('status', 'published')
     .single()

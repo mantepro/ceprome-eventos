@@ -19,7 +19,7 @@ interface Props {
 
 export function EventCard({ event, orgSlug }: Props) {
   return (
-    <Link href={`/${orgSlug}/eventos/${event.id}`} className="group">
+    <Link href={`/${orgSlug}/eventos/${event.slug}`} className="group">
       <Card className="overflow-hidden h-full transition-shadow group-hover:shadow-md">
         <div className="relative h-44 bg-gradient-to-br from-primary/20 to-primary/5">
           {event.cover_url && (

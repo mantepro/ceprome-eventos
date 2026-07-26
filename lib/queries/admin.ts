@@ -181,7 +181,7 @@ export const getEventById = cache(async (id: string, orgId: string) => {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('events')
-    .select('id, name, description, location, starts_at, ends_at, modality, status, cover_url, allow_preregistration, invoice_instructions, transfer_instructions')
+    .select('id, name, slug, description, location, starts_at, ends_at, modality, status, cover_url, allow_preregistration, invoice_instructions, transfer_instructions')
     .eq('id', id)
     .eq('organization_id', orgId)
     .single()
@@ -189,6 +189,16 @@ export const getEventById = cache(async (id: string, orgId: string) => {
 })
 
 export type AdminEventDetail = Awaited<ReturnType<typeof getEventById>>
+
+export const getOrganizationSlug = cache(async (orgId: string): Promise<string | null> => {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('organizations')
+    .select('slug')
+    .eq('id', orgId)
+    .single()
+  return data?.slug ?? null
+})
 
 export const getEventTicketTypes = cache(async (eventId: string, orgId: string) => {
   const supabase = createAdminClient()
