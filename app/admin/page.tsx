@@ -1,4 +1,4 @@
-import { Users, Clock, CheckCircle, DollarSign } from 'lucide-react'
+import { Users, Clock, CheckCircle, DollarSign, GraduationCap } from 'lucide-react'
 import { getCurrentUserProfile, getAdminStats } from '@/lib/queries/admin'
 import { formatCurrency } from '@/lib/utils'
 
@@ -19,7 +19,7 @@ export default async function AdminDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard
           label="Total inscritos"
           value={stats.total.toString()}
@@ -45,12 +45,18 @@ export default async function AdminDashboard() {
           icon={DollarSign}
           color="purple"
         />
+        <StatCard
+          label="Becas otorgadas"
+          value={formatCurrency(stats.scholarshipsAwarded, 'USD')}
+          icon={GraduationCap}
+          color="rose"
+        />
       </div>
     </div>
   )
 }
 
-type Color = 'blue' | 'amber' | 'green' | 'purple'
+type Color = 'blue' | 'amber' | 'green' | 'purple' | 'rose'
 
 function StatCard({
   label,
@@ -70,6 +76,7 @@ function StatCard({
     amber:  { bg: 'bg-amber-50',  icon: 'text-amber-600' },
     green:  { bg: 'bg-green-50',  icon: 'text-green-600' },
     purple: { bg: 'bg-purple-50', icon: 'text-purple-600' },
+    rose:   { bg: 'bg-rose-50',   icon: 'text-rose-600' },
   }
   const c = colorMap[color]
 

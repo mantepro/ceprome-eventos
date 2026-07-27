@@ -40,11 +40,34 @@ export const getAdminStats = cache(async (orgId: string) => {
 
   const revenue = paidResult.data?.reduce((sum, r) => sum + r.total_amount, 0) ?? 0
 
+  // Becas otorgadas — suma del descuento de registrations pagadas cuyo cupón
+  // está marcado para contarse en este reporte. Se calcula aparte de `revenue`,
+  // que refleja únicamente el dinero real recaudado.
+  const { data: scholarshipCoupons } = await supabase
+    .from('coupons')
+    .select('id')
+    .eq('organization_id', orgId)
+    .eq('count_as_scholarship', true)
+
+  const scholarshipCouponIds = (scholarshipCoupons ?? []).map((c) => c.id)
+
+  let scholarshipsAwarded = 0
+  if (scholarshipCouponIds.length > 0) {
+    const { data: scholarshipRegs } = await supabase
+      .from('registrations')
+      .select('discount_amount')
+      .eq('organization_id', orgId)
+      .eq('status', 'paid')
+      .in('coupon_id', scholarshipCouponIds)
+    scholarshipsAwarded = scholarshipRegs?.reduce((sum, r) => sum + r.discount_amount, 0) ?? 0
+  }
+
   return {
     total: totalResult.count ?? 0,
     pending: pendingResult.count ?? 0,
     paid: paidResult.data?.length ?? 0,
     revenue,
+    scholarshipsAwarded,
   }
 })
 
@@ -265,7 +288,7 @@ export const getCoupons = cache(async (orgId: string) => {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('coupons')
-    .select('id, code, type, value, max_uses, used_count, active, event_id, created_at, events(name)')
+    .select('id, code, type, value, max_uses, used_count, active, count_as_scholarship, event_id, created_at, events(name)')
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })
   return data ?? []

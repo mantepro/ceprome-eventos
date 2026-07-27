@@ -62,6 +62,7 @@ const couponSchema = z.object({
   value: z.coerce.number().positive('El valor debe ser positivo'),
   max_uses: z.union([z.coerce.number().int().positive(), z.literal('').transform(() => null)]).optional(),
   event_id: z.string().uuid().optional().or(z.literal('').transform(() => undefined)),
+  count_as_scholarship: z.boolean().default(true),
 })
 
 export type CouponFormState = { error?: string; errors?: Record<string, string>; success?: boolean }
@@ -79,6 +80,7 @@ export async function createCoupon(
     value: formData.get('value') as string,
     max_uses: (formData.get('max_uses') as string) || '',
     event_id: (formData.get('event_id') as string) || '',
+    count_as_scholarship: formData.get('count_as_scholarship') === 'on',
   }
 
   const parsed = couponSchema.safeParse(raw)
@@ -90,7 +92,7 @@ export async function createCoupon(
     }
   }
 
-  const { code, type, value, max_uses, event_id } = parsed.data
+  const { code, type, value, max_uses, event_id, count_as_scholarship } = parsed.data
   const supabase = createAdminClient()
 
   // Check uniqueness within org (case-insensitive)
@@ -110,6 +112,7 @@ export async function createCoupon(
     type,
     value,
     max_uses: max_uses ?? null,
+    count_as_scholarship,
   })
 
   if (error) return { error: 'No se pudo crear el cupón.' }

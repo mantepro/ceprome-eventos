@@ -71,6 +71,21 @@ export function CouponForm({ events }: { events: AdminEvent[] }) {
         </select>
       </Field>
 
+      <div>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            name="count_as_scholarship"
+            defaultChecked
+            className="h-4 w-4 rounded"
+          />
+          Contabilizar como beca otorgada en reportes
+        </label>
+        <p className="text-xs text-muted-foreground mt-1">
+          Si lo desmarcas, el descuento de este cupón no aparecerá en el reporte de becas otorgadas — útil para cupones de prueba o internos que no quieres que aparezcan en reportes económicos.
+        </p>
+      </div>
+
       <div className="flex justify-end">
         <Button type="submit" disabled={pending} size="sm">
           {pending ? 'Creando…' : 'Crear cupón'}
