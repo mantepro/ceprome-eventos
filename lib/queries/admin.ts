@@ -144,7 +144,7 @@ export const getRegistrations = cache(async (orgId: string) => {
   const { data } = await supabase
     .from('registrations')
     .select(`
-      id, folio, status, payment_method, total_amount, created_at, event_id,
+      id, folio, status, payment_method, total_amount, created_at, event_id, coupon_id,
       events(id, name),
       attendees(id, first_name, last_name, email, phone, extra_data),
       tickets(id, status, checked_in_at, ticket_types(name, currency))
@@ -152,7 +152,26 @@ export const getRegistrations = cache(async (orgId: string) => {
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })
 
-  return data ?? []
+  const rows = data ?? []
+
+  // No se embebe coupons(code) directamente: no hay una relación FK
+  // registrada entre registrations y coupons en el esquema tipado, así que
+  // se resuelve el código del cupón por separado (mismo patrón que
+  // scholarshipsAwarded más abajo).
+  const couponIds = [...new Set(rows.map((r) => r.coupon_id).filter((id): id is string => !!id))]
+  let couponCodeById = new Map<string, string>()
+  if (couponIds.length > 0) {
+    const { data: coupons } = await supabase
+      .from('coupons')
+      .select('id, code')
+      .in('id', couponIds)
+    couponCodeById = new Map((coupons ?? []).map((c) => [c.id, c.code]))
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    coupon_code: r.coupon_id ? couponCodeById.get(r.coupon_id) ?? null : null,
+  }))
 })
 
 export type RegistrationRow = Awaited<ReturnType<typeof getRegistrations>>[number]

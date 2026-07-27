@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   let regQuery = supabase
     .from('registrations')
     .select(`
-      id, folio, status, payment_method, total_amount, created_at, event_id,
+      id, folio, status, payment_method, total_amount, created_at, event_id, coupon_id,
       events(id, name),
       attendees(first_name, last_name, email, phone, extra_data),
       tickets(ticket_types(name, currency))
@@ -26,6 +26,16 @@ export async function GET(request: Request) {
   if (status) regQuery = regQuery.eq('status', status as 'draft' | 'pending' | 'paid' | 'cancelled')
 
   const { data: regs } = await regQuery
+
+  // No se embebe coupons(code): no hay relación FK registrada entre
+  // registrations y coupons en el esquema tipado, así que se resuelve
+  // el código por separado.
+  const couponIds = [...new Set((regs ?? []).map((r) => r.coupon_id).filter((id): id is string => !!id))]
+  let couponCodeById = new Map<string, string>()
+  if (couponIds.length > 0) {
+    const { data: coupons } = await supabase.from('coupons').select('id, code').in('id', couponIds)
+    couponCodeById = new Map((coupons ?? []).map((c) => [c.id, c.code]))
+  }
 
   let fieldsQuery = supabase
     .from('event_fields')
@@ -62,7 +72,7 @@ export async function GET(request: Request) {
   const baseHeaders = [
     'Folio', 'Nombre', 'Apellido', 'Email', 'Teléfono',
     'Evento', 'Tipo de acceso', 'Monto', 'Moneda',
-    'Método de pago', 'Estado', 'Fecha de inscripción',
+    'Método de pago', 'Cupón', 'Estado', 'Fecha de inscripción',
   ]
   const pHeaders = participantFields.map(f => f.label)
   const iHeaders = internalFields.map(f => `${f.label} (Interno)`)
@@ -108,6 +118,7 @@ export async function GET(request: Request) {
 
     const ticketType = (reg.tickets as { ticket_types: { name: string; currency: string } | null }[])?.[0]?.ticket_types
     const evName = (reg.events as { name: string } | null)?.name ?? ''
+    const couponCode = reg.coupon_id ? couponCodeById.get(reg.coupon_id) ?? '' : ''
     const extra = (att?.extra_data as Record<string, unknown>) ?? {}
 
     sheet.addRow([
@@ -121,6 +132,7 @@ export async function GET(request: Request) {
       reg.total_amount,
       ticketType?.currency ?? '',
       reg.payment_method ? (methodMap[reg.payment_method] ?? reg.payment_method) : '',
+      couponCode,
       statusMap[reg.status] ?? reg.status,
       new Date(reg.created_at).toLocaleString('es-MX'),
       ...participantFields.map(f => {
@@ -135,7 +147,7 @@ export async function GET(request: Request) {
   }
 
   const colWidths = [
-    16, 18, 18, 28, 16, 30, 20, 10, 8, 16, 12, 20,
+    16, 18, 18, 28, 16, 30, 20, 10, 8, 16, 14, 12, 20,
     ...participantFields.map(() => 20),
     ...internalFields.map(() => 20),
   ]

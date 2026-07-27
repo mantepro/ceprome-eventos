@@ -74,6 +74,7 @@ const TOGGLEABLE_COLS = [
   { id: 'pais',        label: 'País' },
   { id: 'amount',      label: 'Monto' },
   { id: 'method',      label: 'Método' },
+  { id: 'coupon',      label: 'Cupón' },
   { id: 'phone',       label: 'Teléfono' },
   { id: 'event',       label: 'Evento' },
 ] as const
@@ -112,6 +113,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const [ticketTypeFilter, setTicketTypeFilter] = useState('all')
   const [eventFilter, setEventFilter] = useState('all')
   const [countryFilter, setCountryFilter] = useState('all')
+  const [couponFilter, setCouponFilter] = useState('all')
   const [sortCol, setSortCol] = useState<SortCol>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
@@ -235,6 +237,14 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     return Array.from(set).sort()
   }, [registrations, countryField])
 
+  const uniqueCoupons = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of registrations) {
+      if (r.coupon_code) set.add(r.coupon_code)
+    }
+    return Array.from(set).sort()
+  }, [registrations])
+
   const filtered = useMemo(() => {
     let result = registrations
     if (search.trim()) {
@@ -265,8 +275,11 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
         return att?.extra_data?.[countryField.id] === countryFilter
       })
     }
+    if (couponFilter !== 'all') {
+      result = result.filter((r) => r.coupon_code === couponFilter)
+    }
     return result
-  }, [registrations, search, statusFilter, ticketTypeFilter, eventFilter, countryFilter, countryField])
+  }, [registrations, search, statusFilter, ticketTypeFilter, eventFilter, countryFilter, countryField, couponFilter])
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -432,7 +445,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 
   const show = (id: string) => !hiddenCols.has(id)
 
-  const hasActiveFilters = search || statusFilter !== 'all' || ticketTypeFilter !== 'all' || eventFilter !== 'all' || countryFilter !== 'all'
+  const hasActiveFilters = search || statusFilter !== 'all' || ticketTypeFilter !== 'all' || eventFilter !== 'all' || countryFilter !== 'all' || couponFilter !== 'all'
 
   function clearFilters() {
     setSearch('')
@@ -440,6 +453,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     setTicketTypeFilter('all')
     setEventFilter('all')
     setCountryFilter('all')
+    setCouponFilter('all')
     resetPage()
   }
 
@@ -612,6 +626,16 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
           </Select>
         )}
 
+        {uniqueCoupons.length > 0 && (
+          <Select value={couponFilter} onValueChange={(v) => { setCouponFilter(v); resetPage() }}>
+            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="Cupón" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los cupones</SelectItem>
+              {uniqueCoupons.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
@@ -678,6 +702,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                 {show('pais') && countryField && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>País</th>}
                 {show('amount')      && <SortTH col="amount" active={sortCol} dir={sortDir} onSort={handleSort} className="text-right whitespace-nowrap" style={TH_BASE}>Monto</SortTH>}
                 {show('method')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Método</th>}
+                {show('coupon')      && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Cupón</th>}
                 {show('phone')       && <th className="px-4 py-3 text-left font-medium whitespace-nowrap" style={TH_BASE}>Teléfono</th>}
                 {show('event')       && <SortTH col="event" active={sortCol} dir={sortDir} onSort={handleSort} className="whitespace-nowrap" style={TH_BASE}>Evento</SortTH>}
                 {visibleParticipantFields.filter(f => show(f.id)).map((f) => (
@@ -872,6 +897,11 @@ function RegistrationRowItem({
       )}
       {show('amount') && <td className="px-4 py-3 text-right font-medium text-xs">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</td>}
       {show('method') && <td className="px-4 py-3 text-muted-foreground text-xs">{reg.payment_method ? (METHOD_LABELS[reg.payment_method] ?? reg.payment_method) : '—'}</td>}
+      {show('coupon') && (
+        <td className="px-4 py-3 text-muted-foreground text-xs font-mono whitespace-nowrap">
+          {reg.coupon_code ?? '—'}
+        </td>
+      )}
       {show('phone')  && <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{attendee?.phone ?? '—'}</td>}
       {show('event')  && <td className="px-4 py-3 text-muted-foreground text-xs">{eventName ?? '—'}</td>}
       {participantFields.map((f) => {
