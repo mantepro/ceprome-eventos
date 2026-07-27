@@ -263,7 +263,9 @@ export function RegistrationForm({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="firstName">Nombre<span className="text-destructive ml-1">*</span></Label>
+              <Label htmlFor="firstName">
+                <span className="leading-snug">Nombre<span className="text-destructive ml-1">*</span></span>
+              </Label>
               <Input
                 id="firstName"
                 value={firstName}
@@ -273,7 +275,9 @@ export function RegistrationForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="lastName">Apellido<span className="text-destructive ml-1">*</span></Label>
+              <Label htmlFor="lastName">
+                <span className="leading-snug">Apellido<span className="text-destructive ml-1">*</span></span>
+              </Label>
               <Input
                 id="lastName"
                 value={lastName}
@@ -283,7 +287,9 @@ export function RegistrationForm({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="email">Correo electrónico<span className="text-destructive ml-1">*</span></Label>
+            <Label htmlFor="email">
+              <span className="leading-snug">Correo electrónico<span className="text-destructive ml-1">*</span></span>
+            </Label>
             <Input
               id="email"
               type="email"
@@ -293,7 +299,9 @@ export function RegistrationForm({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="confirmEmail">Confirmar correo electrónico<span className="text-destructive ml-1">*</span></Label>
+            <Label htmlFor="confirmEmail">
+              <span className="leading-snug">Confirmar correo electrónico<span className="text-destructive ml-1">*</span></span>
+            </Label>
             <Input
               id="confirmEmail"
               type="email"
@@ -304,7 +312,9 @@ export function RegistrationForm({
           </div>
           <div className={countryField ? 'grid gap-4 sm:grid-cols-2' : ''}>
             <div className="space-y-1.5">
-              <Label htmlFor="phone">Teléfono<span className="text-destructive ml-1">*</span></Label>
+              <Label htmlFor="phone">
+                <span className="leading-snug">Teléfono<span className="text-destructive ml-1">*</span></span>
+              </Label>
               <PhoneInput
                 key={phoneCountry}
                 id="phone"
@@ -585,8 +595,10 @@ function ExtraField({
   return (
     <div className="space-y-1.5">
       <Label htmlFor={field.id}>
-        {field.label}
-        {field.required && <span className="text-destructive ml-1">*</span>}
+        <span className="leading-snug">
+          {field.label}
+          {field.required && <span className="text-destructive ml-1">*</span>}
+        </span>
       </Label>
 
       {field.field_type === 'text' && (
