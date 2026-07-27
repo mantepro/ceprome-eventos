@@ -131,12 +131,28 @@ export default async function ConfirmationPage({
           </p>
         </div>
       ) : isPaid ? (
-        <div className="rounded-lg border bg-green-50 border-green-200 px-4 py-4 text-center space-y-1">
-          <p className="font-semibold text-green-900">Pago confirmado</p>
+        <div className="rounded-lg border bg-green-50 border-green-200 px-4 py-4 text-center space-y-2">
+          <p className="font-semibold text-green-900">¡Gracias por tu inscripción!</p>
           <p className="text-sm text-green-800">
-            Tu ticket con código QR será enviado a{' '}
-            <strong>{attendee?.email}</strong>.
+            Tu ticket con código QR será enviado a <strong>{attendee?.email}</strong>.
           </p>
+          {reg.events?.location && (
+            <p className="text-sm text-green-800">
+              Nos vemos en <strong>{reg.events.location}</strong>.
+            </p>
+          )}
+          <p className="text-sm text-green-800">
+            Mantente al pendiente de las redes sociales de CEPROME para más información.
+          </p>
+          {(reg.organizations?.email || reg.organizations?.whatsapp_contact) && (
+            <p className="text-xs text-green-700 pt-2 border-t border-green-200 mt-2">
+              ¿Dudas o comentarios? Escríbenos
+              {reg.organizations?.email && <> a <strong>{reg.organizations.email}</strong></>}
+              {reg.organizations?.email && reg.organizations?.whatsapp_contact && ' o '}
+              {reg.organizations?.whatsapp_contact && <>por WhatsApp al <strong>{reg.organizations.whatsapp_contact}</strong></>}
+              .
+            </p>
+          )}
         </div>
       ) : isOnline ? (
         <div className="space-y-3">
