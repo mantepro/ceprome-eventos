@@ -263,7 +263,7 @@ export function RegistrationForm({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="firstName">Nombre</Label>
+              <Label htmlFor="firstName">Nombre<span className="text-destructive ml-1">*</span></Label>
               <Input
                 id="firstName"
                 value={firstName}
@@ -273,7 +273,7 @@ export function RegistrationForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="lastName">Apellido</Label>
+              <Label htmlFor="lastName">Apellido<span className="text-destructive ml-1">*</span></Label>
               <Input
                 id="lastName"
                 value={lastName}
@@ -283,7 +283,7 @@ export function RegistrationForm({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="email">Correo electrónico</Label>
+            <Label htmlFor="email">Correo electrónico<span className="text-destructive ml-1">*</span></Label>
             <Input
               id="email"
               type="email"
@@ -293,7 +293,7 @@ export function RegistrationForm({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="confirmEmail">Confirmar correo electrónico</Label>
+            <Label htmlFor="confirmEmail">Confirmar correo electrónico<span className="text-destructive ml-1">*</span></Label>
             <Input
               id="confirmEmail"
               type="email"
@@ -304,7 +304,7 @@ export function RegistrationForm({
           </div>
           <div className={countryField ? 'grid gap-4 sm:grid-cols-2' : ''}>
             <div className="space-y-1.5">
-              <Label htmlFor="phone">Teléfono</Label>
+              <Label htmlFor="phone">Teléfono<span className="text-destructive ml-1">*</span></Label>
               <PhoneInput
                 id="phone"
                 country={phoneCountry}
