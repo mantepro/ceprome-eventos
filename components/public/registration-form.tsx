@@ -263,7 +263,7 @@ export function RegistrationForm({
 
         {step === 1 && (
         <div className="space-y-4">
-          <p className="text-sm font-semibold text-foreground">Datos de contacto</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#a22944]">Datos de contacto</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="firstName">
@@ -355,8 +355,8 @@ export function RegistrationForm({
                   <div key={field.id}>
                     {showSectionHeading && (
                       <p
-                        className={`text-sm font-semibold text-foreground mb-3 ${
-                          i > 0 ? 'border-t pt-3' : ''
+                        className={`text-xs font-semibold uppercase tracking-wide text-[#a22944] mb-3 ${
+                          i > 0 ? 'mt-8 pt-4 border-t' : ''
                         }`}
                       >
                         {field.section}
