@@ -45,21 +45,48 @@ export const getAdminStats = cache(async (orgId: string) => {
   // que refleja únicamente el dinero real recaudado.
   const { data: scholarshipCoupons } = await supabase
     .from('coupons')
-    .select('id')
+    .select('id, code, approved_by, description')
     .eq('organization_id', orgId)
     .eq('count_as_scholarship', true)
 
-  const scholarshipCouponIds = (scholarshipCoupons ?? []).map((c) => c.id)
+  const couponById = new Map((scholarshipCoupons ?? []).map((c) => [c.id, c]))
+  const scholarshipCouponIds = [...couponById.keys()]
 
   let scholarshipsAwarded = 0
+  const scholarshipBreakdown: {
+    couponCode: string
+    approvedBy: string | null
+    description: string | null
+    totalAmount: number
+  }[] = []
+
   if (scholarshipCouponIds.length > 0) {
     const { data: scholarshipRegs } = await supabase
       .from('registrations')
-      .select('discount_amount')
+      .select('coupon_id, discount_amount')
       .eq('organization_id', orgId)
       .eq('status', 'paid')
       .in('coupon_id', scholarshipCouponIds)
-    scholarshipsAwarded = scholarshipRegs?.reduce((sum, r) => sum + r.discount_amount, 0) ?? 0
+
+    const totalsByCoupon = new Map<string, number>()
+    for (const reg of scholarshipRegs ?? []) {
+      if (!reg.coupon_id) continue
+      totalsByCoupon.set(reg.coupon_id, (totalsByCoupon.get(reg.coupon_id) ?? 0) + reg.discount_amount)
+    }
+
+    for (const [couponId, totalAmount] of totalsByCoupon) {
+      const coupon = couponById.get(couponId)
+      if (!coupon) continue
+      scholarshipBreakdown.push({
+        couponCode: coupon.code,
+        approvedBy: coupon.approved_by,
+        description: coupon.description,
+        totalAmount,
+      })
+    }
+
+    scholarshipBreakdown.sort((a, b) => b.totalAmount - a.totalAmount)
+    scholarshipsAwarded = scholarshipBreakdown.reduce((sum, b) => sum + b.totalAmount, 0)
   }
 
   return {
@@ -68,6 +95,7 @@ export const getAdminStats = cache(async (orgId: string) => {
     paid: paidResult.data?.length ?? 0,
     revenue,
     scholarshipsAwarded,
+    scholarshipBreakdown,
   }
 })
 
@@ -288,7 +316,7 @@ export const getCoupons = cache(async (orgId: string) => {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('coupons')
-    .select('id, code, type, value, max_uses, used_count, active, count_as_scholarship, event_id, created_at, events(name)')
+    .select('id, code, type, value, max_uses, used_count, active, count_as_scholarship, approved_by, description, event_id, created_at, events(name)')
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })
   return data ?? []

@@ -49,6 +49,8 @@ export default async function CuponesPage() {
                   <th className="px-4 py-3 text-right font-medium">Valor</th>
                   <th className="px-4 py-3 text-left font-medium">Evento</th>
                   <th className="px-4 py-3 text-center font-medium">Beca</th>
+                  <th className="px-4 py-3 text-left font-medium">Aprobado por</th>
+                  <th className="px-4 py-3 text-left font-medium">Motivo</th>
                   <th className="px-4 py-3 text-right font-medium">Usos</th>
                   <th className="px-4 py-3 text-left font-medium">Creado</th>
                   <th className="px-4 py-3 text-right font-medium">Estado / Acciones</th>
@@ -84,6 +86,21 @@ export default async function CuponesPage() {
                           <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                             No
                           </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {c.approved_by ?? <span className="italic">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {c.description ? (
+                          <span
+                            className="block max-w-[200px] truncate"
+                            title={c.description}
+                          >
+                            {c.description}
+                          </span>
+                        ) : (
+                          <span className="italic">—</span>
                         )}
                       </td>
                       <td className={`px-4 py-3 text-right font-medium ${exhausted ? 'text-destructive' : ''}`}>

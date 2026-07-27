@@ -5,6 +5,7 @@ import { createCoupon, type CouponFormState } from '@/lib/actions/coupons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import type { AdminEvent } from '@/lib/queries/admin'
 
 const initial: CouponFormState = {}
@@ -55,6 +56,20 @@ export function CouponForm({ events }: { events: AdminEvent[] }) {
 
         <Field label="Límite de usos (vacío = ilimitado)" error={state.errors?.max_uses}>
           <Input name="max_uses" type="number" min="1" step="1" placeholder="Sin límite" />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Aprobado por" error={state.errors?.approved_by}>
+          <Input name="approved_by" placeholder="Nombre de quien autorizó" />
+        </Field>
+
+        <Field label="Motivo / descripción" error={state.errors?.description}>
+          <Textarea
+            name="description"
+            placeholder="Beca por ponencia internacional, cortesía institucional, etc."
+            rows={2}
+          />
         </Field>
       </div>
 

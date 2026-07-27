@@ -132,6 +132,8 @@ export interface Database {
           used_count: number
           active: boolean
           count_as_scholarship: boolean
+          approved_by: string | null
+          description: string | null
           created_at: string
         }
         Insert: {
@@ -145,6 +147,8 @@ export interface Database {
           used_count?: number
           active?: boolean
           count_as_scholarship?: boolean
+          approved_by?: string | null
+          description?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['coupons']['Insert']>
