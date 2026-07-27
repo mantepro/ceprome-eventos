@@ -1,12 +1,14 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendConfirmationEmail } from '@/lib/email/confirmation'
 import { validateCoupon } from '@/lib/actions/coupons'
 import { generateAndSendTicket } from '@/lib/actions/generate-ticket'
+import { publicBasePath } from '@/lib/org-domain'
 import { formatDate } from '@/lib/utils'
 
 const schema = z.object({
@@ -222,5 +224,15 @@ export async function createRegistration(
     }
   }
 
-  redirect(`/${orgSlug}/confirmar/${folio}`)
+  const { data: orgRow } = await supabase
+    .from('organizations')
+    .select('custom_domain')
+    .eq('id', orgId)
+    .single()
+  const basePath = publicBasePath(
+    { slug: orgSlug, custom_domain: orgRow?.custom_domain ?? null },
+    (await headers()).get('host')
+  )
+
+  redirect(`${basePath}/confirmar/${folio}`)
 }

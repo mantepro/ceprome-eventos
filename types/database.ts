@@ -13,6 +13,7 @@ export interface Database {
           logo_url: string | null
           whatsapp_contact: string | null
           active: boolean
+          custom_domain: string | null
           created_at: string
         }
         Insert: {
@@ -24,6 +25,7 @@ export interface Database {
           logo_url?: string | null
           whatsapp_contact?: string | null
           active?: boolean
+          custom_domain?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['organizations']['Insert']>

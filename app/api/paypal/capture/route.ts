@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { capturePayPalOrder } from '@/lib/paypal'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateAndSendTicket } from '@/lib/actions/generate-ticket'
+import { resolveBasePathBySlug } from '@/lib/org-domain'
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = req.nextUrl
@@ -9,8 +10,11 @@ export async function GET(req: NextRequest) {
   const folio = searchParams.get('folio')
   const slug = searchParams.get('slug')
 
+  const supabase = createAdminClient()
+  const basePath = await resolveBasePathBySlug(supabase, slug ?? '', req.headers.get('host'))
+
   const failUrl = folio && slug
-    ? `${origin}/${slug}/confirmar/${folio}?pago=fallido`
+    ? `${origin}${basePath}/confirmar/${folio}?pago=fallido`
     : `${origin}/`
 
   if (!token || !folio || !slug) {
@@ -18,8 +22,6 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const supabase = createAdminClient()
-
     // Verificar que el pago aún está pendiente (evita capturas duplicadas)
     const { data: payment } = await supabase
       .from('payments')
@@ -29,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     if (!payment) return NextResponse.redirect(failUrl)
     if (payment.status === 'completed') {
-      return NextResponse.redirect(`${origin}/${slug}/confirmar/${folio}`)
+      return NextResponse.redirect(`${origin}${basePath}/confirmar/${folio}`)
     }
 
     const result = await capturePayPalOrder(token)
@@ -61,7 +63,7 @@ export async function GET(req: NextRequest) {
       console.error('[paypal/capture] generateAndSendTicket:', err)
     )
 
-    return NextResponse.redirect(`${origin}/${slug}/confirmar/${folio}?pago=ok`)
+    return NextResponse.redirect(`${origin}${basePath}/confirmar/${folio}?pago=ok`)
   } catch {
     return NextResponse.redirect(failUrl)
   }

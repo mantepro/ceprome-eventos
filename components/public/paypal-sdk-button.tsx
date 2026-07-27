@@ -7,11 +7,20 @@ import { PayPalScriptProvider, PayPalButtons, usePayPalScriptReducer } from '@pa
 interface Props {
   folio: string
   orgSlug: string
+  basePath: string
   currency: string
   amount: number
 }
 
-function PayPalButtonsInner({ folio, orgSlug }: { folio: string; orgSlug: string }) {
+function PayPalButtonsInner({
+  folio,
+  orgSlug,
+  basePath,
+}: {
+  folio: string
+  orgSlug: string
+  basePath: string
+}) {
   const router = useRouter()
   const [{ isPending }] = usePayPalScriptReducer()
   const [error, setError] = useState('')
@@ -41,7 +50,7 @@ function PayPalButtonsInner({ folio, orgSlug }: { folio: string; orgSlug: string
       setError(result.error ?? 'No se pudo confirmar el pago. Contacta al organizador.')
       return
     }
-    router.push(`/${orgSlug}/confirmar/${folio}?pago=ok`)
+    router.push(`${basePath}/confirmar/${folio}?pago=ok`)
   }
 
   function onCancel() {
@@ -78,7 +87,7 @@ function PayPalButtonsInner({ folio, orgSlug }: { folio: string; orgSlug: string
   )
 }
 
-export function PayPalSdkButton({ folio, orgSlug, currency, amount }: Props) {
+export function PayPalSdkButton({ folio, orgSlug, basePath, currency, amount }: Props) {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ?? ''
 
   return (
@@ -90,7 +99,7 @@ export function PayPalSdkButton({ folio, orgSlug, currency, amount }: Props) {
         components: 'buttons',
       }}
     >
-      <PayPalButtonsInner folio={folio} orgSlug={orgSlug} />
+      <PayPalButtonsInner folio={folio} orgSlug={orgSlug} basePath={basePath} />
       <p className="text-xs text-center text-muted-foreground">
         Total: {new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)}
         {' '}· Pago seguro procesado por PayPal

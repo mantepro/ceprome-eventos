@@ -1,10 +1,12 @@
 import Image from 'next/image'
+import { headers } from 'next/headers'
 import { Calendar, MapPin, Globe, Building2, Hotel, Mail, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getOrgBySlug, getPublishedEventBySlug, getActiveTicketTypes } from '@/lib/queries/events'
 import { TicketTypeCard } from '@/components/public/ticket-type-card'
 import { CountdownTimer } from '@/components/public/countdown-timer'
 import { capitalize, formatDate } from '@/lib/format'
+import { publicBasePath } from '@/lib/org-domain'
 import type { Event } from '@/types/database'
 
 const MODALITY_LABEL: Record<Event['modality'], string> = {
@@ -30,6 +32,7 @@ export default async function EventDetailPage({ params }: { params: Params }) {
   const org = await getOrgBySlug(slug)
   const event = await getPublishedEventBySlug(org.id, eventSlug)
   const ticketTypes = await getActiveTicketTypes(event.id)
+  const basePath = publicBasePath(org, (await headers()).get('host'))
 
   return (
     <div>
@@ -106,7 +109,7 @@ export default async function EventDetailPage({ params }: { params: Params }) {
               <TicketTypeCard
                 key={tt.id}
                 ticketType={tt}
-                orgSlug={slug}
+                basePath={basePath}
                 eventSlug={eventSlug}
                 allowPreregistration={event.allow_preregistration}
                 primary={i === 0}

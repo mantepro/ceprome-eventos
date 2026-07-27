@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createPayPalOrder } from '@/lib/paypal'
+import { resolveBasePathBySlug } from '@/lib/org-domain'
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,13 +33,14 @@ export async function POST(req: NextRequest) {
       (reg.events as { name: string } | null)?.name ?? 'Inscripción'
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const basePath = await resolveBasePathBySlug(supabase, orgSlug, req.headers.get('host'))
 
     const { orderId } = await createPayPalOrder({
       amount: reg.total_amount,
       currency,
       description: eventName,
       returnUrl: `${appUrl}/api/paypal/capture?folio=${folio}&slug=${orgSlug}`,
-      cancelUrl: `${appUrl}/${orgSlug}/pagar/${folio}?pago=cancelado`,
+      cancelUrl: `${appUrl}${basePath}/pagar/${folio}?pago=cancelado`,
     })
 
     // Move draft → pending so the slot is reserved

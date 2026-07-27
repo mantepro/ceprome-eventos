@@ -14,12 +14,12 @@ const MODALITY_LABEL: Record<Event['modality'], string> = {
 
 interface Props {
   event: Event
-  orgSlug: string
+  basePath: string
 }
 
-export function EventCard({ event, orgSlug }: Props) {
+export function EventCard({ event, basePath }: Props) {
   return (
-    <Link href={`/${orgSlug}/eventos/${event.slug}`} className="group">
+    <Link href={`${basePath}/eventos/${event.slug}`} className="group">
       <Card className="overflow-hidden h-full transition-shadow group-hover:shadow-md">
         <div className="relative h-44 bg-gradient-to-br from-primary/20 to-primary/5">
           {event.cover_url && (

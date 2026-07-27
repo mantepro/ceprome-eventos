@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { headers } from 'next/headers'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { getOrgBySlug } from '@/lib/queries/events'
+import { publicBasePath } from '@/lib/org-domain'
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' })
 
@@ -16,15 +17,17 @@ export default async function PublicLayout({
   const { slug } = await params
   const org = await getOrgBySlug(slug)
 
-  const pathname = (await headers()).get('x-pathname') ?? ''
+  const requestHeaders = await headers()
+  const pathname = requestHeaders.get('x-pathname') ?? ''
   const hideSharedChrome = /^\/[^/]+\/registro(\/|$)/.test(pathname)
+  const basePath = publicBasePath(org, requestHeaders.get('host'))
 
   return (
     <div className={`${jakarta.variable} font-public-site min-h-screen bg-background`}>
       {!hideSharedChrome && (
         <header className="sticky top-0 z-50 border-b bg-white">
           <div className="container mx-auto flex h-16 items-center px-4">
-            <Link href={`/${slug}/eventos`} className="flex items-center gap-2.5">
+            <Link href={`${basePath}/eventos`} className="flex items-center gap-2.5">
               {org.logo_url ? (
                 <div className="relative h-10 w-40">
                   <Image

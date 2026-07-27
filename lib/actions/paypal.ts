@@ -1,8 +1,10 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createPayPalOrder } from '@/lib/paypal'
+import { resolveBasePathBySlug } from '@/lib/org-domain'
 
 export async function initiatePayPalFromPagar(
   folio: string,
@@ -43,13 +45,14 @@ export async function initiatePayPalFromPagar(
     .maybeSingle()
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const basePath = await resolveBasePathBySlug(supabase, orgSlug, (await headers()).get('host'))
 
   const { orderId, approvalUrl } = await createPayPalOrder({
     amount: reg.total_amount,
     currency,
     description: eventName,
     returnUrl: `${appUrl}/api/paypal/capture?folio=${folio}&slug=${orgSlug}`,
-    cancelUrl: `${appUrl}/${orgSlug}/pagar/${folio}?pago=cancelado`,
+    cancelUrl: `${appUrl}${basePath}/pagar/${folio}?pago=cancelado`,
   })
 
   if (existingPayment) {
@@ -99,13 +102,14 @@ export async function initiatePayPalPayment(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const eventName =
     (reg.events as { name: string } | null)?.name ?? 'Evento CEPROME'
+  const basePath = await resolveBasePathBySlug(supabase, orgSlug, (await headers()).get('host'))
 
   const { orderId, approvalUrl } = await createPayPalOrder({
     amount: reg.total_amount,
     currency: 'USD',
     description: eventName,
     returnUrl: `${appUrl}/api/paypal/capture?folio=${folio}&slug=${orgSlug}`,
-    cancelUrl: `${appUrl}/${orgSlug}/confirmar/${folio}?pago=cancelado`,
+    cancelUrl: `${appUrl}${basePath}/confirmar/${folio}?pago=cancelado`,
   })
 
   await supabase

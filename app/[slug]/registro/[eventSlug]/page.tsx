@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import { headers } from 'next/headers'
 import { getOrgBySlug, getPublishedEventBySlug, getActiveTicketTypes, getEventFields } from '@/lib/queries/events'
 import { RegistrationForm } from '@/components/public/registration-form'
+import { publicBasePath } from '@/lib/org-domain'
 
 type Params = Promise<{ slug: string; eventSlug: string }>
 type SearchParams = Promise<{ tipo?: string; prereg?: string }>
@@ -30,6 +32,7 @@ export default async function RegistrationPage({
     getActiveTicketTypes(event.id),
     getEventFields(event.id),
   ])
+  const basePath = publicBasePath(org, (await headers()).get('host'))
 
   return (
     <div className="registro-form min-h-screen bg-[#f9fafb]">
@@ -50,7 +53,7 @@ export default async function RegistrationPage({
           </div>
           <p className="truncate text-sm text-muted-foreground">{event.name}</p>
           <Link
-            href={`/${slug}/eventos/${eventSlug}`}
+            href={`${basePath}/eventos/${eventSlug}`}
             className="shrink-0 text-sm font-medium text-[#a22944] hover:underline"
           >
             Guardar y salir

@@ -8,7 +8,7 @@ import type { TicketType } from '@/types/database'
 
 interface Props {
   ticketType: TicketType
-  orgSlug: string
+  basePath: string
   eventSlug: string
   allowPreregistration?: boolean
   primary?: boolean
@@ -30,13 +30,13 @@ function getAvailability(tt: TicketType): { label: string; urgent: boolean; avai
 
 export function TicketTypeCard({
   ticketType,
-  orgSlug,
+  basePath,
   eventSlug,
   allowPreregistration = false,
   primary = false,
 }: Props) {
   const { label, urgent, available } = getAvailability(ticketType)
-  const base = `/${orgSlug}/registro/${eventSlug}?tipo=${ticketType.id}`
+  const base = `${basePath}/registro/${eventSlug}?tipo=${ticketType.id}`
 
   return (
     <Card className={!available ? 'opacity-60' : ''}>

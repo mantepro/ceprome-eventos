@@ -1,6 +1,8 @@
 import { Calendar } from 'lucide-react'
+import { headers } from 'next/headers'
 import { getOrgBySlug, getPublishedEvents } from '@/lib/queries/events'
 import { EventCard } from '@/components/public/event-card'
+import { publicBasePath } from '@/lib/org-domain'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -12,6 +14,7 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
   const { slug } = await params
   const org = await getOrgBySlug(slug)
   const events = await getPublishedEvents(org.id)
+  const basePath = publicBasePath(org, (await headers()).get('host'))
 
   if (events.length === 0) {
     return (
@@ -30,7 +33,7 @@ export default async function EventsPage({ params }: { params: Promise<{ slug: s
       <h1 className="text-2xl font-bold mb-6">Eventos</h1>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => (
-          <EventCard key={event.id} event={event} orgSlug={slug} />
+          <EventCard key={event.id} event={event} basePath={basePath} />
         ))}
       </div>
     </div>

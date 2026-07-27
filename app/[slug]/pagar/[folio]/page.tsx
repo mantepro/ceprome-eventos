@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import { getRegistrationByFolio } from '@/lib/queries/registrations'
+import { getOrgBySlug } from '@/lib/queries/events'
 import { PayPalSdkButton } from '@/components/public/paypal-sdk-button'
 import { formatDate, formatCurrency } from '@/lib/utils'
+import { publicBasePath } from '@/lib/org-domain'
 
 type Params = Promise<{ slug: string; folio: string }>
 type SearchParams = Promise<{ pago?: string }>
@@ -28,6 +31,9 @@ export default async function PagarPage({
   } catch {
     notFound()
   }
+
+  const org = await getOrgBySlug(slug)
+  const basePath = publicBasePath(org, (await headers()).get('host'))
 
   const attendee = reg.attendees[0]
   const ticket = reg.tickets[0]
@@ -164,6 +170,7 @@ export default async function PagarPage({
           <PayPalSdkButton
             folio={folio}
             orgSlug={slug}
+            basePath={basePath}
             currency={ticket?.ticket_types?.currency ?? 'USD'}
             amount={reg.total_amount}
           />
