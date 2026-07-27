@@ -306,8 +306,9 @@ export function RegistrationForm({
             <div className="space-y-1.5">
               <Label htmlFor="phone">Teléfono<span className="text-destructive ml-1">*</span></Label>
               <PhoneInput
+                key={phoneCountry}
                 id="phone"
-                country={phoneCountry}
+                defaultCountry={phoneCountry}
                 onCountryChange={(c) => setPhoneCountry(c ?? 'MX')}
                 value={phone}
                 onChange={setPhone}
@@ -315,7 +316,7 @@ export function RegistrationForm({
                 flags={flags}
               />
               <p className="text-xs text-muted-foreground">
-                Selecciona la lada de tu WhatsApp — puede ser diferente a tu país de residencia.
+                Selecciona la lada de tu teléfono (para llamadas y WhatsApp) — puede ser diferente a tu país de residencia.
               </p>
             </div>
             {countryField && (
