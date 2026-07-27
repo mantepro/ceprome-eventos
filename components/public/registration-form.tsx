@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import PhoneInput from 'react-phone-number-input'
+import flags from 'react-phone-number-input/flags'
 import type { E164Number, CountryCode } from 'libphonenumber-js/core'
 import 'react-phone-number-input/style.css'
 import { Check } from 'lucide-react'
@@ -311,7 +312,11 @@ export function RegistrationForm({
                 value={phone}
                 onChange={setPhone}
                 numberInputProps={{ maxLength: 15 }}
+                flags={flags}
               />
+              <p className="text-xs text-muted-foreground">
+                Selecciona la lada de tu WhatsApp — puede ser diferente a tu país de residencia.
+              </p>
             </div>
             {countryField && (
               <ExtraField
