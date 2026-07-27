@@ -16,6 +16,8 @@ const fieldSchema = z.object({
   sort_order: z.coerce.number().int().min(0).default(0),
   scope: z.enum(['participant', 'internal']).default('participant'),
   allow_other: z.boolean().default(false),
+  section: z.string().optional(),
+  pair_with_phone: z.boolean().default(false),
 })
 
 const TYPES_REQUIRING_OPTIONS = ['select', 'radio', 'multiselect']
@@ -35,7 +37,24 @@ function parseFieldForm(formData: FormData) {
     sort_order: (formData.get('sort_order') as string) || '0',
     scope: (formData.get('scope') as string) || 'participant',
     allow_other: formData.get('allow_other') === 'on',
+    section: (formData.get('section') as string) || undefined,
+    pair_with_phone: formData.get('pair_with_phone') === 'on',
   }
+}
+
+async function clearOtherPairWithPhone(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string,
+  orgId: string,
+  excludeFieldId?: string
+) {
+  let query = supabase
+    .from('event_fields')
+    .update({ pair_with_phone: false })
+    .eq('event_id', eventId)
+    .eq('organization_id', orgId)
+  if (excludeFieldId) query = query.neq('id', excludeFieldId)
+  await query
 }
 
 export async function createEventField(
@@ -55,8 +74,12 @@ export async function createEventField(
     }
   }
 
-  const { label, field_type, options, helper_text, required, sort_order, scope, allow_other } = parsed.data
+  const { label, field_type, options, helper_text, required, sort_order, scope, allow_other, section, pair_with_phone } = parsed.data
   const supabase = await createClient()
+
+  if (pair_with_phone) {
+    await clearOtherPairWithPhone(supabase, eventId, profile.organization_id)
+  }
 
   const { error } = await supabase.from('event_fields').insert({
     event_id: eventId,
@@ -69,6 +92,8 @@ export async function createEventField(
     sort_order,
     scope,
     allow_other,
+    section: section || null,
+    pair_with_phone,
   })
 
   if (error) return { error: 'Error al crear el campo.' }
@@ -95,8 +120,12 @@ export async function updateEventField(
     }
   }
 
-  const { label, field_type, options, helper_text, required, sort_order, scope, allow_other } = parsed.data
+  const { label, field_type, options, helper_text, required, sort_order, scope, allow_other, section, pair_with_phone } = parsed.data
   const supabase = await createClient()
+
+  if (pair_with_phone) {
+    await clearOtherPairWithPhone(supabase, eventId, profile.organization_id, fieldId)
+  }
 
   const { error } = await supabase
     .from('event_fields')
@@ -109,6 +138,8 @@ export async function updateEventField(
       sort_order,
       scope,
       allow_other,
+      section: section || null,
+      pair_with_phone,
     })
     .eq('id', fieldId)
     .eq('organization_id', profile.organization_id)

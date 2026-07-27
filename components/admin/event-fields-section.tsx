@@ -222,6 +222,14 @@ export function EventFieldsSection({ eventId, fields }: Props) {
             </div>
           </div>
 
+          <div className="space-y-1">
+            <Label className="text-xs">Sección</Label>
+            <Input name="section" placeholder="Datos institucionales, Accesibilidad y salud…" />
+            <p className="text-xs text-muted-foreground">
+              Agrupa preguntas bajo un mismo subtítulo en el formulario público. Déjalo vacío si no aplica.
+            </p>
+          </div>
+
           {TYPES_WITH_OPTIONS.includes(newType) && (
             <div className="space-y-1">
               <Label className="text-xs">Opciones (separadas por coma) *</Label>
@@ -238,6 +246,16 @@ export function EventFieldsSection({ eventId, fields }: Props) {
               Permitir opción &quot;Otro&quot; con texto libre
             </label>
           )}
+
+          <div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" name="pair_with_phone" className="h-4 w-4 rounded" />
+              Mostrar junto a Teléfono (en la misma fila)
+            </label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Solo un campo puede tener esta opción activa a la vez — al marcarlo se desactiva automáticamente en cualquier otro campo del evento.
+            </p>
+          </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
@@ -393,6 +411,18 @@ function SortableFieldRow({
                 </div>
               </div>
 
+              <div className="space-y-1">
+                <Label className="text-xs">Sección</Label>
+                <Input
+                  name="section"
+                  defaultValue={field.section ?? ''}
+                  placeholder="Datos institucionales, Accesibilidad y salud…"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Agrupa preguntas bajo un mismo subtítulo en el formulario público. Déjalo vacío si no aplica.
+                </p>
+              </div>
+
               {TYPES_WITH_OPTIONS.includes(editType) && (
                 <div className="space-y-1">
                   <Label className="text-xs">Opciones (separadas por coma)</Label>
@@ -415,6 +445,21 @@ function SortableFieldRow({
                   Permitir opción &quot;Otro&quot; con texto libre
                 </label>
               )}
+
+              <div>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="pair_with_phone"
+                    defaultChecked={field.pair_with_phone}
+                    className="h-4 w-4 rounded"
+                  />
+                  Mostrar junto a Teléfono (en la misma fila)
+                </label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Solo un campo puede tener esta opción activa a la vez — al marcarlo se desactiva automáticamente en cualquier otro campo del evento.
+                </p>
+              </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">

@@ -97,8 +97,9 @@ export function RegistrationForm({
   const selectedType = ticketTypes.find((t) => t.id === selectedTypeId)
   const currentBubble = toBubble(step)
   const stepCopy = STEP_COPY[step]
-  const countryField = eventFields.find((f) => f.field_type === 'country')
-  const otherFields = eventFields.filter((f) => f.id !== countryField?.id)
+  const phonePairField =
+    eventFields.find((f) => f.pair_with_phone) ?? eventFields.find((f) => f.field_type === 'country')
+  const otherFields = eventFields.filter((f) => f.id !== phonePairField?.id)
 
   const paymentOptions = [
     {
@@ -262,6 +263,7 @@ export function RegistrationForm({
 
         {step === 1 && (
         <div className="space-y-4">
+          <p className="text-sm font-semibold text-foreground">Datos de contacto</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="firstName">
@@ -311,7 +313,7 @@ export function RegistrationForm({
               placeholder=""
             />
           </div>
-          <div className={countryField ? 'grid gap-4 sm:grid-cols-2' : ''}>
+          <div className={phonePairField ? 'grid gap-4 sm:grid-cols-2' : ''}>
             <div className="space-y-1.5">
               <Label htmlFor="phone">
                 <span className="leading-snug">Teléfono<span className="text-destructive ml-1">*</span></span>
@@ -333,29 +335,43 @@ export function RegistrationForm({
                 Selecciona la lada de tu teléfono.
               </p>
             </div>
-            {countryField && (
+            {phonePairField && (
               <ExtraField
-                field={countryField}
-                value={extraData[countryField.id]}
-                onChange={(val) => handleExtraFieldChange(countryField, val)}
-                otherText={otherTexts[countryField.id] ?? ''}
-                onOtherTextChange={(text) => setOtherTexts((prev) => ({ ...prev, [countryField.id]: text }))}
+                field={phonePairField}
+                value={extraData[phonePairField.id]}
+                onChange={(val) => handleExtraFieldChange(phonePairField, val)}
+                otherText={otherTexts[phonePairField.id] ?? ''}
+                onOtherTextChange={(text) => setOtherTexts((prev) => ({ ...prev, [phonePairField.id]: text }))}
               />
             )}
           </div>
 
           {otherFields.length > 0 && (
             <div className="space-y-4 pt-2 border-t">
-              {otherFields.map((field) => (
-                <ExtraField
-                  key={field.id}
-                  field={field}
-                  value={extraData[field.id]}
-                  onChange={(val) => handleExtraFieldChange(field, val)}
-                  otherText={otherTexts[field.id] ?? ''}
-                  onOtherTextChange={(text) => setOtherTexts((prev) => ({ ...prev, [field.id]: text }))}
-                />
-              ))}
+              {otherFields.map((field, i) => {
+                const prevSection = otherFields[i - 1]?.section
+                const showSectionHeading = !!field.section && field.section !== prevSection
+                return (
+                  <div key={field.id}>
+                    {showSectionHeading && (
+                      <p
+                        className={`text-sm font-semibold text-foreground mb-3 ${
+                          i > 0 ? 'border-t pt-3' : ''
+                        }`}
+                      >
+                        {field.section}
+                      </p>
+                    )}
+                    <ExtraField
+                      field={field}
+                      value={extraData[field.id]}
+                      onChange={(val) => handleExtraFieldChange(field, val)}
+                      otherText={otherTexts[field.id] ?? ''}
+                      onOtherTextChange={(text) => setOtherTexts((prev) => ({ ...prev, [field.id]: text }))}
+                    />
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

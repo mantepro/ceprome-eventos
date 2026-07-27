@@ -449,6 +449,8 @@ export interface Database {
           scope: 'participant' | 'internal'
           active: boolean
           allow_other: boolean
+          section: string | null
+          pair_with_phone: boolean
           created_at: string
         }
         Insert: {
@@ -464,6 +466,8 @@ export interface Database {
           scope?: 'participant' | 'internal'
           active?: boolean
           allow_other?: boolean
+          section?: string | null
+          pair_with_phone?: boolean
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['event_fields']['Insert']>
