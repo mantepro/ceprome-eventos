@@ -441,13 +441,14 @@ export interface Database {
           event_id: string
           organization_id: string
           label: string
-          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country'
+          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country' | 'multiselect'
           options: string[] | null
           helper_text: string | null
           required: boolean
           sort_order: number
           scope: 'participant' | 'internal'
           active: boolean
+          allow_other: boolean
           created_at: string
         }
         Insert: {
@@ -455,13 +456,14 @@ export interface Database {
           event_id: string
           organization_id: string
           label: string
-          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country'
+          field_type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country' | 'multiselect'
           options?: string[] | null
           helper_text?: string | null
           required?: boolean
           sort_order?: number
           scope?: 'participant' | 'internal'
           active?: boolean
+          allow_other?: boolean
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['event_fields']['Insert']>

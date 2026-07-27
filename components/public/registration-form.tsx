@@ -34,6 +34,22 @@ function toBubble(step: Step): Bubble {
   return 2
 }
 
+const OTHER_OPTION = 'Otro'
+
+function resolveFieldValue(
+  field: EventField,
+  raw: string | boolean | string[],
+  otherText: string
+): string | boolean | string[] {
+  if (!field.allow_other) return raw
+  if (Array.isArray(raw)) {
+    if (!raw.includes(OTHER_OPTION)) return raw
+    return raw.map((v) => (v === OTHER_OPTION ? `${OTHER_OPTION}: ${otherText.trim()}` : v))
+  }
+  if (raw === OTHER_OPTION) return `${OTHER_OPTION}: ${otherText.trim()}`
+  return raw
+}
+
 interface Props {
   event: Event
   ticketTypes: TicketType[]
@@ -63,7 +79,8 @@ export function RegistrationForm({
   const [phone, setPhone] = useState<E164Number | undefined>(undefined)
   const [phoneCountry, setPhoneCountry] = useState<CountryCode>('MX')
   const [confirmEmail, setConfirmEmail] = useState('')
-  const [extraData, setExtraData] = useState<Record<string, string | boolean>>({})
+  const [extraData, setExtraData] = useState<Record<string, string | boolean | string[]>>({})
+  const [otherTexts, setOtherTexts] = useState<Record<string, string>>({})
   const [selectedTypeId, setSelectedTypeId] = useState(preselectedTypeId ?? '')
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>(
     preselectedPayment ?? ''
@@ -117,14 +134,23 @@ export function RegistrationForm({
       const val = extraData[field.id]
       if (field.field_type === 'checkbox') {
         if (!val) return `El campo "${field.label}" es obligatorio.`
+      } else if (field.field_type === 'multiselect') {
+        const arr = Array.isArray(val) ? val : []
+        if (arr.length === 0) return `El campo "${field.label}" es obligatorio.`
+        if (field.allow_other && arr.includes(OTHER_OPTION) && !otherTexts[field.id]?.trim()) {
+          return `Escribe el texto de "Otro" en el campo "${field.label}".`
+        }
       } else {
         if (!val || String(val).trim() === '') return `El campo "${field.label}" es obligatorio.`
+        if (field.allow_other && val === OTHER_OPTION && !otherTexts[field.id]?.trim()) {
+          return `Escribe el texto de "Otro" en el campo "${field.label}".`
+        }
       }
     }
     return null
   }
 
-  function handleExtraFieldChange(field: EventField, val: string | boolean) {
+  function handleExtraFieldChange(field: EventField, val: string | boolean | string[]) {
     setExtraData((prev) => ({ ...prev, [field.id]: val }))
     if (field.field_type === 'country' && typeof val === 'string' && val) {
       const iso = COUNTRY_NAME_TO_ISO[val]
@@ -181,6 +207,14 @@ export function RegistrationForm({
     if (!selectedTypeId) return
     if (!isPreregFlow && !paymentMethod) return
     setError('')
+
+    const finalExtraData: Record<string, string | boolean | string[]> = {}
+    for (const field of eventFields) {
+      const raw = extraData[field.id]
+      if (raw === undefined) continue
+      finalExtraData[field.id] = resolveFieldValue(field, raw, otherTexts[field.id] ?? '')
+    }
+
     startTransition(async () => {
       const result = await createRegistration({
         orgSlug,
@@ -192,7 +226,7 @@ export function RegistrationForm({
         email: email.trim(),
         phone: String(phone ?? ''),
         paymentMethod: isPreregFlow ? 'preregister' : (paymentMethod as 'online' | 'manual'),
-        extraData: Object.keys(extraData).length > 0 ? extraData : undefined,
+        extraData: Object.keys(finalExtraData).length > 0 ? finalExtraData : undefined,
         couponCode: couponResult?.valid ? couponCode.trim() : undefined,
       })
       if (result?.error) setError(result.error)
@@ -284,6 +318,8 @@ export function RegistrationForm({
                 field={countryField}
                 value={extraData[countryField.id]}
                 onChange={(val) => handleExtraFieldChange(countryField, val)}
+                otherText={otherTexts[countryField.id] ?? ''}
+                onOtherTextChange={(text) => setOtherTexts((prev) => ({ ...prev, [countryField.id]: text }))}
               />
             )}
           </div>
@@ -296,6 +332,8 @@ export function RegistrationForm({
                   field={field}
                   value={extraData[field.id]}
                   onChange={(val) => handleExtraFieldChange(field, val)}
+                  otherText={otherTexts[field.id] ?? ''}
+                  onOtherTextChange={(text) => setOtherTexts((prev) => ({ ...prev, [field.id]: text }))}
                 />
               ))}
             </div>
@@ -434,11 +472,22 @@ export function RegistrationForm({
               <p className="text-muted-foreground">{email}</p>
               {phone && <p className="text-muted-foreground">{phone}</p>}
               {eventFields.map((field) => {
-                const val = extraData[field.id]
-                if (val === undefined || val === '' || val === false) return null
+                const raw = extraData[field.id]
+                if (
+                  raw === undefined ||
+                  raw === '' ||
+                  raw === false ||
+                  (Array.isArray(raw) && raw.length === 0)
+                ) return null
+                const resolved = resolveFieldValue(field, raw, otherTexts[field.id] ?? '')
+                const display = field.field_type === 'checkbox'
+                  ? 'Sí'
+                  : Array.isArray(resolved)
+                  ? resolved.join(', ')
+                  : String(resolved)
                 return (
                   <p key={field.id} className="text-muted-foreground">
-                    {field.label}: {field.field_type === 'checkbox' ? 'Sí' : String(val)}
+                    {field.label}: {display}
                   </p>
                 )
               })}
@@ -515,12 +564,17 @@ function ExtraField({
   field,
   value,
   onChange,
+  otherText = '',
+  onOtherTextChange,
 }: {
   field: EventField
-  value: string | boolean | undefined
-  onChange: (val: string | boolean) => void
+  value: string | boolean | string[] | undefined
+  onChange: (val: string | boolean | string[]) => void
+  otherText?: string
+  onOtherTextChange?: (text: string) => void
 }) {
   const helperText = (field as { helper_text?: string | null }).helper_text
+  const optionsWithOther = field.allow_other ? [...(field.options ?? []), OTHER_OPTION] : (field.options ?? [])
 
   return (
     <div className="space-y-1.5">
@@ -568,19 +622,29 @@ function ExtraField({
       )}
 
       {field.field_type === 'select' && (
-        <select
-          id={field.id}
-          value={(value as string) ?? ''}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          <option value="">Selecciona una opción…</option>
-          {(field.options ?? []).map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
+        <>
+          <select
+            id={field.id}
+            value={(value as string) ?? ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="">Selecciona una opción…</option>
+            {optionsWithOther.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          {field.allow_other && value === OTHER_OPTION && (
+            <Input
+              value={otherText}
+              onChange={(e) => onOtherTextChange?.(e.target.value)}
+              placeholder="Especifica…"
+              className="mt-2"
+            />
+          )}
+        </>
       )}
 
       {field.field_type === 'country' && (
@@ -601,7 +665,7 @@ function ExtraField({
 
       {field.field_type === 'radio' && (
         <div className="space-y-2">
-          {(field.options ?? []).map((opt) => (
+          {optionsWithOther.map((opt) => (
             <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="radio"
@@ -614,6 +678,47 @@ function ExtraField({
               {opt}
             </label>
           ))}
+          {field.allow_other && value === OTHER_OPTION && (
+            <Input
+              value={otherText}
+              onChange={(e) => onOtherTextChange?.(e.target.value)}
+              placeholder="Especifica…"
+              className="mt-1"
+            />
+          )}
+        </div>
+      )}
+
+      {field.field_type === 'multiselect' && (
+        <div className="space-y-2">
+          {optionsWithOther.map((opt) => {
+            const arr = Array.isArray(value) ? value : []
+            const checked = arr.includes(opt)
+            return (
+              <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                      ? [...arr, opt]
+                      : arr.filter((v) => v !== opt)
+                    onChange(next)
+                  }}
+                  className="h-4 w-4 rounded"
+                />
+                {opt}
+              </label>
+            )
+          })}
+          {field.allow_other && Array.isArray(value) && value.includes(OTHER_OPTION) && (
+            <Input
+              value={otherText}
+              onChange={(e) => onOtherTextChange?.(e.target.value)}
+              placeholder="Especifica…"
+              className="mt-1"
+            />
+          )}
         </div>
       )}
 

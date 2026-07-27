@@ -9,16 +9,19 @@ export type EventFieldFormState = { error?: string; errors?: Record<string, stri
 
 const fieldSchema = z.object({
   label: z.string().min(2, 'Mínimo 2 caracteres'),
-  field_type: z.enum(['text', 'textarea', 'number', 'select', 'radio', 'checkbox', 'date', 'country'], { message: 'Tipo requerido' }),
+  field_type: z.enum(['text', 'textarea', 'number', 'select', 'radio', 'checkbox', 'date', 'country', 'multiselect'], { message: 'Tipo requerido' }),
   options: z.string().optional(),
   helper_text: z.string().optional(),
   required: z.boolean().default(false),
   sort_order: z.coerce.number().int().min(0).default(0),
   scope: z.enum(['participant', 'internal']).default('participant'),
+  allow_other: z.boolean().default(false),
 })
 
+const TYPES_REQUIRING_OPTIONS = ['select', 'radio', 'multiselect']
+
 function parseOptions(type: string, raw: string | undefined): string[] | null {
-  if (!['select', 'radio'].includes(type) || !raw?.trim()) return null
+  if (!TYPES_REQUIRING_OPTIONS.includes(type) || !raw?.trim()) return null
   return raw.split(',').map((o) => o.trim()).filter(Boolean)
 }
 
@@ -31,6 +34,7 @@ function parseFieldForm(formData: FormData) {
     required: formData.get('required') === 'on',
     sort_order: (formData.get('sort_order') as string) || '0',
     scope: (formData.get('scope') as string) || 'participant',
+    allow_other: formData.get('allow_other') === 'on',
   }
 }
 
@@ -51,7 +55,7 @@ export async function createEventField(
     }
   }
 
-  const { label, field_type, options, helper_text, required, sort_order, scope } = parsed.data
+  const { label, field_type, options, helper_text, required, sort_order, scope, allow_other } = parsed.data
   const supabase = await createClient()
 
   const { error } = await supabase.from('event_fields').insert({
@@ -64,6 +68,7 @@ export async function createEventField(
     required,
     sort_order,
     scope,
+    allow_other,
   })
 
   if (error) return { error: 'Error al crear el campo.' }
@@ -90,7 +95,7 @@ export async function updateEventField(
     }
   }
 
-  const { label, field_type, options, helper_text, required, sort_order, scope } = parsed.data
+  const { label, field_type, options, helper_text, required, sort_order, scope, allow_other } = parsed.data
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -103,6 +108,7 @@ export async function updateEventField(
       required,
       sort_order,
       scope,
+      allow_other,
     })
     .eq('id', fieldId)
     .eq('organization_id', profile.organization_id)

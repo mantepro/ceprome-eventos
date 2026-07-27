@@ -877,7 +877,7 @@ function RegistrationRowItem({
       {participantFields.map((f) => {
         const extra = (attendee?.extra_data as Record<string, unknown>) ?? {}
         const v = extra[f.id]
-        const display = v === true ? 'Sí' : v === false ? 'No' : v != null ? String(v) : '—'
+        const display = v === true ? 'Sí' : v === false ? 'No' : Array.isArray(v) ? v.join(', ') : v != null ? String(v) : '—'
         return (
           <td key={f.id} className="px-4 py-3 text-xs" style={{ backgroundColor: rowBg }}>
             <span style={{ display: 'block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={display !== '—' ? display : undefined}>{display}</span>

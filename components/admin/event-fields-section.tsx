@@ -36,20 +36,22 @@ import {
 } from '@/lib/actions/event-fields'
 import type { AdminEventField } from '@/lib/queries/admin'
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country'
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'date' | 'country' | 'multiselect'
 
 const TYPE_LABELS: Record<FieldType, string> = {
-  text:     'Texto corto',
-  textarea: 'Texto largo',
-  number:   'Número',
-  select:   'Selección (dropdown)',
-  radio:    'Opción única (radio)',
-  checkbox: 'Casilla (sí/no)',
-  date:     'Fecha',
-  country:  'País (selector)',
+  text:        'Texto corto',
+  textarea:    'Texto largo',
+  number:      'Número',
+  select:      'Selección (dropdown)',
+  radio:       'Opción única (radio)',
+  checkbox:    'Casilla (sí/no)',
+  date:        'Fecha',
+  country:     'País (selector)',
+  multiselect: 'Selección múltiple (checkboxes)',
 }
 
-const TYPES_WITH_OPTIONS: FieldType[] = ['select', 'radio']
+const TYPES_WITH_OPTIONS: FieldType[] = ['select', 'radio', 'multiselect']
+const TYPES_WITH_ALLOW_OTHER: FieldType[] = ['select', 'radio', 'multiselect']
 
 const SCOPE_LABELS = {
   participant: 'Formulario público',
@@ -230,6 +232,13 @@ export function EventFieldsSection({ eventId, fields }: Props) {
             </div>
           )}
 
+          {TYPES_WITH_ALLOW_OTHER.includes(newType) && (
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" name="allow_other" className="h-4 w-4 rounded" />
+              Permitir opción &quot;Otro&quot; con texto libre
+            </label>
+          )}
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label className="text-xs">Texto de ayuda</Label>
@@ -393,6 +402,18 @@ function SortableFieldRow({
                     placeholder="México, Colombia, Argentina"
                   />
                 </div>
+              )}
+
+              {TYPES_WITH_ALLOW_OTHER.includes(editType) && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="allow_other"
+                    defaultChecked={field.allow_other}
+                    className="h-4 w-4 rounded"
+                  />
+                  Permitir opción &quot;Otro&quot; con texto libre
+                </label>
               )}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

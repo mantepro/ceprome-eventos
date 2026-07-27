@@ -21,7 +21,7 @@ const schema = z.object({
     { message: 'Teléfono inválido (8–15 dígitos)' }
   ),
   paymentMethod: z.enum(['online', 'manual', 'preregister']),
-  extraData: z.record(z.string(), z.union([z.string(), z.boolean()])).optional(),
+  extraData: z.record(z.string(), z.union([z.string(), z.boolean(), z.array(z.string())])).optional(),
   couponCode: z.string().optional(),
 })
 
