@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import PhoneInput from 'react-phone-number-input'
+import PhoneInput, { getCountryCallingCode, type Country } from 'react-phone-number-input'
 import flags from 'react-phone-number-input/flags'
+import es from 'react-phone-number-input/locale/es.json'
 import type { E164Number, CountryCode } from 'libphonenumber-js/core'
 import 'react-phone-number-input/style.css'
 import { Check } from 'lucide-react'
@@ -322,11 +323,14 @@ export function RegistrationForm({
                 onCountryChange={(c) => setPhoneCountry(c ?? 'MX')}
                 value={phone}
                 onChange={setPhone}
-                numberInputProps={{ maxLength: 15 }}
+                numberInputProps={{ maxLength: 15, placeholder: '10 dígitos' }}
                 flags={flags}
+                labels={es}
+                countrySelectComponent={CountrySelectWithCallingCode}
+                international={false}
               />
               <p className="text-xs text-muted-foreground">
-                Selecciona la lada de tu teléfono (para llamadas y WhatsApp) — puede ser diferente a tu país de residencia.
+                Selecciona la lada de tu teléfono.
               </p>
             </div>
             {countryField && (
@@ -572,6 +576,67 @@ export function RegistrationForm({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+interface CountrySelectOption {
+  value?: Country
+  label: string
+  divider?: boolean
+}
+
+function DefaultCountrySelectArrow() {
+  return <div className="PhoneInputCountrySelectArrow" />
+}
+
+function CountrySelectWithCallingCode({
+  value,
+  onChange,
+  options,
+  disabled,
+  readOnly,
+  className,
+  iconComponent: Icon,
+  arrowComponent: Arrow,
+  ...rest
+}: {
+  value?: Country
+  onChange: (value?: Country) => void
+  options: CountrySelectOption[]
+  disabled?: boolean
+  readOnly?: boolean
+  className?: string
+  iconComponent?: React.ComponentType<{ country?: Country; label?: string }>
+  arrowComponent?: React.ComponentType
+  [key: string]: unknown
+}) {
+  const ArrowComponent = Arrow ?? DefaultCountrySelectArrow
+  const selectedOption = options.find((opt) => (opt.value ?? undefined) === (value ?? undefined))
+
+  return (
+    <div className="PhoneInputCountry">
+      <select
+        {...rest}
+        value={value || 'ZZ'}
+        onChange={(e) => onChange(e.target.value === 'ZZ' ? undefined : (e.target.value as Country))}
+        disabled={disabled || readOnly}
+        className={`PhoneInputCountrySelect${className ? ` ${className}` : ''}`}
+      >
+        {options.map((opt) => (
+          <option
+            key={opt.divider ? '|' : opt.value || 'ZZ'}
+            value={opt.divider ? '|' : opt.value || 'ZZ'}
+            disabled={opt.divider}
+          >
+            {opt.value ? `+${getCountryCallingCode(opt.value)} ${opt.label}` : opt.label}
+          </option>
+        ))}
+      </select>
+      {selectedOption && Icon && (
+        <Icon aria-hidden country={value} label={selectedOption.label} />
+      )}
+      <ArrowComponent />
     </div>
   )
 }
