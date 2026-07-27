@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(git commit -m 'fix: truncar texto en th/td de campos personalizados con maxWidth inline *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(vercel logs *)",
+      "Bash(npx vercel *)",
+      "Bash(npx shadcn@latest add dropdown-menu --yes)",
+      "Bash(curl -s https://eywtwdczggfdvmuhmwdw.supabase.co/rest/v1/rpc/query -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5d3R3ZGN6Z2dmZHZtdWhtd2R3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzA3MDc4MywiZXhwIjoyMDkyNjQ2NzgzfQ.Y8ROYbeKwUltA7j3jDrKwdJZcuqsUjfTI3GuWhVhRq4' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5d3R3ZGN6Z2dmZHZtdWhtd2R3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzA3MDc4MywiZXhwIjoyMDkyNjQ2NzgzfQ.Y8ROYbeKwUltA7j3jDrKwdJZcuqsUjfTI3GuWhVhRq4' -H 'Content-Type: application/json' -d '{\"query\": \"SELECT id, folio, status FROM registrations WHERE folio = '\\\\''REG-2026-1QKE'\\\\''\"}')",
+      "Bash(npx supabase *)",
+      "Bash(node -e \"const v = require\\('./node_modules/@react-pdf/renderer/package.json'\\); console.log\\(v.version\\)\")"
     ]
   }
 }

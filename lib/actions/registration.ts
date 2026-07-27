@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendConfirmationEmail } from '@/lib/email/confirmation'
 import { validateCoupon } from '@/lib/actions/coupons'
+import { generateAndSendTicket } from '@/lib/actions/generate-ticket'
 import { formatDate } from '@/lib/utils'
 
 const schema = z.object({
@@ -77,6 +78,9 @@ export async function createRegistration(
   const finalAmount = Math.max(0, ticketType.price - discountAmount)
 
   const isPreregister = paymentMethod === 'preregister'
+  // Nada que un admin necesite verificar cuando el monto final es $0
+  // (cupón al 100%, o un ticket_type gratuito) — se aprueba de una vez.
+  const isAutoApproved = !isPreregister && finalAmount === 0
   const folio = generateFolio()
   const registrationId = crypto.randomUUID()
   const attendeeId = crypto.randomUUID()
@@ -88,7 +92,7 @@ export async function createRegistration(
       organization_id: orgId,
       event_id: eventId,
       folio,
-      status: isPreregister ? 'draft' : 'pending',
+      status: isPreregister ? 'draft' : isAutoApproved ? 'paid' : 'pending',
       payment_method: isPreregister ? null : paymentMethod,
       total_amount: finalAmount,
       discount_amount: discountAmount,
@@ -125,7 +129,7 @@ export async function createRegistration(
     organization_id: orgId,
     event_id: eventId,
     token: crypto.randomUUID(),
-    status: 'pending',
+    status: isAutoApproved ? 'active' : 'pending',
   })
 
   if (ticketError) {
@@ -141,7 +145,8 @@ export async function createRegistration(
       amount: finalAmount,
       currency: ticketType.currency,
       method: paymentMethod === 'online' ? 'paypal' : 'manual',
-      status: 'pending',
+      status: isAutoApproved ? 'completed' : 'pending',
+      ...(isAutoApproved && { verified_at: new Date().toISOString() }),
     })
 
     if (paymentError) {
@@ -166,45 +171,55 @@ export async function createRegistration(
     }
   }
 
-  // Fire confirmation email — failure must not block the registration redirect
-  try {
-    const [{ data: eventData }, { data: orgData }] = await Promise.all([
-      supabase
-        .from('events')
-        .select('name, starts_at, location, invoice_instructions, transfer_instructions')
-        .eq('id', eventId)
-        .single(),
-      supabase
-        .from('organizations')
-        .select('name, email, whatsapp_contact')
-        .eq('id', orgId)
-        .single(),
-    ])
-
-    if (eventData && orgData) {
-      await sendConfirmationEmail({
-        folio,
-        attendeeName: `${firstName} ${lastName}`,
-        attendeeEmail: email,
-        eventName: eventData.name,
-        eventDate: formatDate(eventData.starts_at),
-        eventLocation: eventData.location,
-        ticketType: ticketType.name,
-        amount: finalAmount,
-        currency: ticketType.currency,
-        orgName: orgData.name,
-        orgEmail: orgData.email,
-        whatsappContact: orgData.whatsapp_contact,
-        paymentMethod,
-        extraData: (extraData as Record<string, string | boolean>) ?? {},
-        invoiceInstructions: eventData.invoice_instructions,
-        transferInstructions: eventData.transfer_instructions,
-        isPaid: false,
-        registrationDate: formatDate(new Date().toISOString()),
-      })
+  if (isAutoApproved) {
+    // Ya está aprobada — enviar directo el ticket con QR, sin el correo de
+    // "pago pendiente" que aplicaría a un registro normal.
+    try {
+      await generateAndSendTicket(registrationId)
+    } catch (err) {
+      console.error('[createRegistration] generateAndSendTicket:', err)
     }
-  } catch (err) {
-    console.error('[sendConfirmationEmail]', err)
+  } else {
+    // Fire confirmation email — failure must not block the registration redirect
+    try {
+      const [{ data: eventData }, { data: orgData }] = await Promise.all([
+        supabase
+          .from('events')
+          .select('name, starts_at, location, invoice_instructions, transfer_instructions')
+          .eq('id', eventId)
+          .single(),
+        supabase
+          .from('organizations')
+          .select('name, email, whatsapp_contact')
+          .eq('id', orgId)
+          .single(),
+      ])
+
+      if (eventData && orgData) {
+        await sendConfirmationEmail({
+          folio,
+          attendeeName: `${firstName} ${lastName}`,
+          attendeeEmail: email,
+          eventName: eventData.name,
+          eventDate: formatDate(eventData.starts_at),
+          eventLocation: eventData.location,
+          ticketType: ticketType.name,
+          amount: finalAmount,
+          currency: ticketType.currency,
+          orgName: orgData.name,
+          orgEmail: orgData.email,
+          whatsappContact: orgData.whatsapp_contact,
+          paymentMethod,
+          extraData: (extraData as Record<string, string | boolean>) ?? {},
+          invoiceInstructions: eventData.invoice_instructions,
+          transferInstructions: eventData.transfer_instructions,
+          isPaid: false,
+          registrationDate: formatDate(new Date().toISOString()),
+        })
+      }
+    } catch (err) {
+      console.error('[sendConfirmationEmail]', err)
+    }
   }
 
   redirect(`/${orgSlug}/confirmar/${folio}`)
