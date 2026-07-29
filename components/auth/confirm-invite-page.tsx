@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { verifyInviteOtp } from '@/lib/actions/auth'
+import { verifyInviteOtp, completeProfile } from '@/lib/actions/auth'
 
 type Stage = 'verifying' | 'set-password' | 'saving' | 'error' | 'invalid'
 
@@ -15,6 +15,8 @@ interface Props {
 export function ConfirmInvitePage({ tokenHash, type }: Props) {
   const [stage, setStage] = useState<Stage>('verifying')
   const [authError, setAuthError] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [formError, setFormError] = useState('')
@@ -55,6 +57,11 @@ export function ConfirmInvitePage({ tokenHash, type }: Props) {
       setFormError(error.message)
       setStage('set-password')
       return
+    }
+    try {
+      await completeProfile(firstName, lastName)
+    } catch {
+      // no bloquea el acceso — la contraseña ya se guardó
     }
     router.replace('/admin')
   }
@@ -97,6 +104,36 @@ export function ConfirmInvitePage({ tokenHash, type }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label htmlFor="first-name" className="text-sm font-medium">
+                Nombre
+              </label>
+              <input
+                id="first-name"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                required
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="last-name" className="text-sm font-medium">
+                Apellido
+              </label>
+              <input
+                id="last-name"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <label htmlFor="password" className="text-sm font-medium">
               Contraseña
@@ -110,7 +147,6 @@ export function ConfirmInvitePage({ tokenHash, type }: Props) {
               placeholder="Mínimo 8 caracteres"
               minLength={8}
               required
-              autoFocus
             />
           </div>
 

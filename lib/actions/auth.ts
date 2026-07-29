@@ -16,3 +16,19 @@ export async function verifyInviteOtp(
 
   return { error: error?.message ?? '' }
 }
+
+export async function completeProfile(
+  firstName: string,
+  lastName: string
+): Promise<{ error: string }> {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return { error: 'Sesión inválida.' }
+
+  const { error } = await supabase
+    .from('users')
+    .update({ first_name: firstName.trim(), last_name: lastName.trim() })
+    .eq('id', session.user.id)
+
+  return { error: error?.message ?? '' }
+}

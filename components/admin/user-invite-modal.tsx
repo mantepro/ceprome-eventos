@@ -34,8 +34,10 @@ export function UserInviteModal({ callerRole }: Props) {
     const fd = new FormData(e.currentTarget)
     const email = fd.get('email') as string
     const role = fd.get('role') as 'org_admin' | 'event_staff'
+    const firstName = fd.get('firstName') as string
+    const lastName = fd.get('lastName') as string
     start(async () => {
-      const result = await inviteUser(email, role)
+      const result = await inviteUser(email, role, firstName, lastName)
       if (result.error) {
         setError(result.error)
       } else {
@@ -66,6 +68,29 @@ export function UserInviteModal({ callerRole }: Props) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="invite-first-name">Nombre</Label>
+                  <Input
+                    id="invite-first-name"
+                    name="firstName"
+                    type="text"
+                    placeholder="Opcional"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="invite-last-name">Apellido</Label>
+                  <Input
+                    id="invite-last-name"
+                    name="lastName"
+                    type="text"
+                    placeholder="Opcional"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="invite-email">Correo electrónico</Label>
                 <Input
@@ -89,7 +114,7 @@ export function UserInviteModal({ callerRole }: Props) {
                   {callerRole === 'super_admin' && (
                     <option value="org_admin">Administrador (org_admin)</option>
                   )}
-                  <option value="event_staff">Personal de evento (event_staff)</option>
+                  <option value="event_staff">Escáner (event_staff)</option>
                 </select>
               </div>
 

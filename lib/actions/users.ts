@@ -8,7 +8,9 @@ type Role = 'org_admin' | 'event_staff'
 
 export async function inviteUser(
   email: string,
-  role: Role
+  role: Role,
+  firstName?: string,
+  lastName?: string
 ): Promise<{ error: string; success: boolean }> {
   const profile = await getCurrentUserProfile()
   if (!profile || (profile.role !== 'super_admin' && profile.role !== 'org_admin')) {
@@ -59,6 +61,8 @@ export async function inviteUser(
     organization_id: orgId,
     role,
     email: normalizedEmail,
+    first_name: firstName?.trim() || null,
+    last_name: lastName?.trim() || null,
     active: true,
   })
 

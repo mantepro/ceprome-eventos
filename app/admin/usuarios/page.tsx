@@ -9,7 +9,7 @@ export const metadata = { title: 'Usuarios — CEPROME Admin' }
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
   org_admin: 'Administrador',
-  event_staff: 'Staff de evento',
+  event_staff: 'Escáner',
 }
 
 const ROLE_BADGE: Record<string, string> = {
