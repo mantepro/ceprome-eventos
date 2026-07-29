@@ -50,7 +50,7 @@ export default async function AdminDashboard() {
   const ticketTypes = featuredEvent
     ? (await getEventTicketTypes(featuredEvent.id, profile.organization_id)).filter((t) => t.active)
     : []
-  const recentRegistrations = registrations.slice(0, 5)
+  const recentRegistrations = registrations.filter((r) => r.status !== 'cancelled').slice(0, 5)
 
   return (
     <div className="space-y-6">

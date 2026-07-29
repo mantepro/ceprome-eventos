@@ -157,6 +157,22 @@ export async function createRegistration(
     }
   }
 
+  // Increment ticket_types sold_count
+  {
+    const adminSupa = createAdminClient()
+    const { data: ttRow } = await adminSupa
+      .from('ticket_types')
+      .select('sold_count')
+      .eq('id', ticketTypeId)
+      .single()
+    if (ttRow) {
+      await adminSupa
+        .from('ticket_types')
+        .update({ sold_count: ttRow.sold_count + 1 })
+        .eq('id', ticketTypeId)
+    }
+  }
+
   // Increment coupon used_count
   if (couponId) {
     const adminSupa = createAdminClient()
