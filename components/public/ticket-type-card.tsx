@@ -85,7 +85,7 @@ export function TicketTypeCard({
                   : 'w-full border-[#a22944] text-[#a22944] hover:bg-[#a22944]/10 hover:text-[#a22944]'
               }
             >
-              <Link href={base}>Elegir este acceso</Link>
+              <Link href={base}>Registrarme</Link>
             </Button>
             {allowPreregistration && (
               <Button asChild variant="ghost" className="w-full">

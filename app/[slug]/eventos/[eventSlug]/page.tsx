@@ -104,18 +104,30 @@ export default async function EventDetailPage({ params }: { params: Params }) {
             No hay tipos de inscripción disponibles en este momento.
           </p>
         ) : (
-          <div className="grid gap-5 md:grid-cols-2">
-            {ticketTypes.map((tt, i) => (
-              <TicketTypeCard
-                key={tt.id}
-                ticketType={tt}
-                basePath={basePath}
-                eventSlug={eventSlug}
-                allowPreregistration={event.allow_preregistration}
-                primary={i === 0}
-              />
-            ))}
-          </div>
+          <>
+            <div className="mb-8 rounded-lg border bg-muted/30 px-5 py-4 max-w-2xl">
+              <p className="font-semibold text-sm mb-2">Así funciona tu inscripción</p>
+              <ol className="space-y-1 text-sm text-muted-foreground list-decimal list-inside">
+                <li>Elige tu tipo de acceso y completa tus datos para apartar tu lugar.</li>
+                <li>
+                  El pago es opcional en este paso: puedes pagarlo en línea de inmediato, dejarlo
+                  pendiente para pagar después, o simplemente reservar tu lugar sin pagar todavía.
+                </li>
+              </ol>
+            </div>
+            <div className="grid gap-5 md:grid-cols-2">
+              {ticketTypes.map((tt, i) => (
+                <TicketTypeCard
+                  key={tt.id}
+                  ticketType={tt}
+                  basePath={basePath}
+                  eventSlug={eventSlug}
+                  allowPreregistration={event.allow_preregistration}
+                  primary={i === 0}
+                />
+              ))}
+            </div>
+          </>
         )}
       </section>
 
