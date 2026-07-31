@@ -113,6 +113,7 @@ export default async function EventDetailPage({ params }: { params: Params }) {
                   El pago es opcional en este paso: puedes pagarlo en línea de inmediato, dejarlo
                   pendiente para pagar después, o simplemente reservar tu lugar sin pagar todavía.
                 </li>
+                <li>Si decides pagar más adelante, te enviaremos las instrucciones por correo después de completar tu registro.</li>
               </ol>
             </div>
             <div className="grid gap-5 md:grid-cols-2">
