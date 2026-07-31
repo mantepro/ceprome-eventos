@@ -11,7 +11,7 @@ export default async function ConfiguracionPage() {
   const supabase = createAdminClient()
   const { data: org } = await supabase
     .from('organizations')
-    .select('whatsapp_contact')
+    .select('email, phone, whatsapp_contact')
     .eq('id', profile.organization_id)
     .single()
 
@@ -24,7 +24,11 @@ export default async function ConfiguracionPage() {
         </p>
       </div>
 
-      <OrgSettingsForm currentWhatsapp={org?.whatsapp_contact ?? null} />
+      <OrgSettingsForm
+        currentEmail={org?.email ?? null}
+        currentPhone={org?.phone ?? null}
+        currentWhatsapp={org?.whatsapp_contact ?? null}
+      />
     </div>
   )
 }

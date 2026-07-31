@@ -8,7 +8,13 @@ import { Label } from '@/components/ui/label'
 
 const initial: OrgSettingsState = {}
 
-export function OrgSettingsForm({ currentWhatsapp }: { currentWhatsapp: string | null }) {
+type OrgSettingsFormProps = {
+  currentEmail: string | null
+  currentPhone: string | null
+  currentWhatsapp: string | null
+}
+
+export function OrgSettingsForm({ currentEmail, currentPhone, currentWhatsapp }: OrgSettingsFormProps) {
   const [state, formAction, pending] = useActionState(updateOrgSettings, initial)
 
   return (
@@ -29,6 +35,25 @@ export function OrgSettingsForm({ currentWhatsapp }: { currentWhatsapp: string |
           <h2 className="text-sm font-semibold">Contacto</h2>
         </div>
         <div className="px-4 py-4 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Correo de contacto</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              defaultValue={currentEmail ?? ''}
+              placeholder="contacto@tuorganizacion.com"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone">Teléfono</Label>
+            <Input
+              id="phone"
+              name="phone"
+              defaultValue={currentPhone ?? ''}
+              placeholder="+52 55 1234 5678"
+            />
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="whatsapp_contact">WhatsApp de contacto</Label>
             <Input

@@ -17,15 +17,18 @@ export async function updateOrgSettings(
   if (!profile) return { error: 'No autorizado.' }
 
   const whatsapp = (formData.get('whatsapp_contact') as string)?.trim() || null
+  const email = (formData.get('email') as string)?.trim() || null
+  const phone = (formData.get('phone') as string)?.trim() || null
 
   const supabase = createAdminClient()
   const { error } = await supabase
     .from('organizations')
-    .update({ whatsapp_contact: whatsapp })
+    .update({ whatsapp_contact: whatsapp, email, phone })
     .eq('id', profile.organization_id)
 
   if (error) return { error: 'No se pudo guardar. Intenta de nuevo.' }
 
   revalidatePath('/admin/configuracion')
+  revalidatePath('/[slug]', 'layout')
   return { success: true }
 }

@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { headers } from 'next/headers'
-import { Calendar, MapPin, Globe, Building2, Hotel, Mail, Phone } from 'lucide-react'
+import { Calendar, MapPin, Globe, Building2, Hotel, Mail, Phone, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getOrgBySlug, getPublishedEventBySlug, getActiveTicketTypes } from '@/lib/queries/events'
 import { TicketTypeCard } from '@/components/public/ticket-type-card'
@@ -136,8 +136,16 @@ export default async function EventDetailPage({ params }: { params: Params }) {
               <Hotel className="h-5 w-5 text-[#a22944]" />
               <h3 className="font-semibold">Hospedaje</h3>
               <p className="text-sm text-muted-foreground">
-                Información sobre hoteles recomendados y tarifas preferenciales próximamente.
-                Contacta al comité organizador si necesitas recomendaciones anticipadas.
+                Consulta la sede, hospedaje recomendado y toda la información del congreso en{' '}
+                <a
+                  href="https://congreso.cepromelat.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#a22944] underline underline-offset-2 font-medium"
+                >
+                  congreso.cepromelat.com
+                </a>
+                .
               </p>
             </div>
             <div className="space-y-2">
@@ -153,6 +161,12 @@ export default async function EventDetailPage({ params }: { params: Params }) {
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Phone className="h-3.5 w-3.5 shrink-0" />
                   <span>{org.phone}</span>
+                </p>
+              )}
+              {org.whatsapp_contact && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span>WhatsApp: {org.whatsapp_contact}</span>
                 </p>
               )}
               {!org.email && !org.phone && (
