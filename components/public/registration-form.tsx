@@ -26,7 +26,7 @@ const STEPS = ['Datos personales', 'Acceso y pago', 'Congreso']
 const STEP_COPY: Record<Step, { title: string; subtitle: string }> = {
   1: { title: 'Datos personales', subtitle: 'Cuéntanos quién eres para generar tu inscripción.' },
   2: { title: 'Tipo de acceso', subtitle: 'Elige el pase con el que asistirás al congreso.' },
-  3: { title: 'Método de pago', subtitle: 'Elige cómo quieres completar tu pago.' },
+  3: { title: 'Método de pago', subtitle: 'Elige cómo quieres completar tu pago. Ninguna opción te cobra automáticamente hasta que tú lo confirmes.' },
   4: { title: 'Revisa tu inscripción', subtitle: 'Confirma que todo esté correcto antes de continuar.' },
 }
 
