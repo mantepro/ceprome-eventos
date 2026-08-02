@@ -22,6 +22,7 @@ export default async function InscritosPage() {
         registrations={registrations}
         orgFields={orgFields}
         orgId={profile.organization_id}
+        isSuperAdmin={profile.role === 'super_admin'}
       />
     </div>
   )

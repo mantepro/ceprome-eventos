@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, MoreHorizontal, LogIn, Archive, ArchiveRestore } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, MoreHorizontal, LogIn, Archive, ArchiveRestore, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { updateRegistrationStatus, updateAttendeeExtraData, archiveRegistration } from '@/lib/actions/registrations'
+import { updateRegistrationStatus, updateAttendeeExtraData, archiveRegistration, deleteRegistration } from '@/lib/actions/registrations'
 import { confirmPayment, type PaymentMethod } from '@/lib/actions/payments'
 import { checkInTicket, revertCheckIn, registerCashPayment } from '@/lib/actions/checkin'
 import { PaymentMethodModal } from '@/components/admin/payment-actions'
@@ -105,9 +105,10 @@ interface Props {
   registrations: RegistrationRow[]
   orgFields: OrgField[]
   orgId: string
+  isSuperAdmin?: boolean
 }
 
-export function RegistrationsTable({ registrations: initial, orgFields, orgId }: Props) {
+export function RegistrationsTable({ registrations: initial, orgFields, orgId, isSuperAdmin = false }: Props) {
   const [registrations, setRegistrations] = useState(initial)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -126,6 +127,9 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const [confirmLoading, startConfirmLoading] = useTransition()
   const [pendingCheckinConfirm, setPendingCheckinConfirm] = useState<{ regId: string; ticketId: string } | null>(null)
   const [showArchived, setShowArchived] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteLoading, startDeleteLoading] = useTransition()
   const [cashPaymentTarget, setCashPaymentTarget] = useState<{ regId: string; ticketId: string | null; amount: number; currency: string } | null>(null)
   const [cashDoPayment, setCashDoPayment] = useState(true)
   const [cashDoCheckIn, setCashDoCheckIn] = useState(true)
@@ -438,6 +442,23 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     toast.success(archived ? 'Inscripción archivada' : 'Inscripción desarchivada')
   }
 
+  function closeDeleteDialog() {
+    setPendingDelete(null)
+    setDeleteConfirmText('')
+  }
+
+  function handleConfirmDelete() {
+    const regId = pendingDelete
+    if (!regId || deleteConfirmText !== 'ELIMINAR') return
+    startDeleteLoading(async () => {
+      const result = await deleteRegistration(regId)
+      if (result.error) { toast.error(result.error); return }
+      setRegistrations((prev) => prev.filter((r) => r.id !== regId))
+      closeDeleteDialog()
+      toast.success('Inscripción eliminada permanentemente')
+    })
+  }
+
   function handleExport() {
     const params = new URLSearchParams()
     if (eventFilter !== 'all') params.set('eventId', eventFilter)
@@ -492,6 +513,41 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
               setPendingCheckinConfirm(null)
             }}>
               Registrar de todos modos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: eliminar permanentemente */}
+      <Dialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) closeDeleteDialog() }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Eliminar permanentemente</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Esta acción no se puede deshacer. Se eliminará permanentemente la inscripción junto con sus boletos,
+            pagos y registros de escaneo asociados.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="deleteConfirmText" className="text-xs">
+              Escribe <strong className="font-mono">ELIMINAR</strong> para confirmar
+            </Label>
+            <Input
+              id="deleteConfirmText"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="ELIMINAR"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteDialog}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteConfirmText !== 'ELIMINAR' || deleteLoading}
+            >
+              {deleteLoading ? 'Eliminando…' : 'Eliminar permanentemente'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -760,6 +816,8 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                   onCheckIn={handleCheckIn}
                   onRevertCheckIn={handleRevertCheckIn}
                   onArchive={handleArchive}
+                  onRequestDelete={(regId) => setPendingDelete(regId)}
+                  isSuperAdmin={isSuperAdmin}
                   onCashPayment={(regId, ticketId, amount, currency) => {
                     setCashDoPayment(true)
                     setCashDoCheckIn(true)
@@ -808,7 +866,8 @@ function SortTH({
 
 function RegistrationRowItem({
   reg, rowIndex, participantFields, internalFields, hiddenCols, countryFieldId,
-  onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn, onArchive, onCashPayment,
+  onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn, onArchive, onRequestDelete,
+  isSuperAdmin, onCashPayment,
 }: {
   reg: RegistrationRow
   rowIndex: number
@@ -822,6 +881,8 @@ function RegistrationRowItem({
   onCheckIn: (regId: string, ticketId: string, isPaid: boolean) => void
   onRevertCheckIn: (regId: string, ticketId: string) => void
   onArchive: (regId: string, archived: boolean) => void
+  onRequestDelete: (regId: string) => void
+  isSuperAdmin: boolean
   onCashPayment: (regId: string, ticketId: string | null, amount: number, currency: string) => void
 }) {
   const [statusPending, startStatus] = useTransition()
@@ -998,6 +1059,18 @@ function RegistrationRowItem({
                 <ArchiveRestore className="h-3.5 w-3.5" />
                 Desarchivar
               </DropdownMenuItem>
+            )}
+            {isSuperAdmin && reg.status === 'cancelled' && reg.archived && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onRequestDelete(reg.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Eliminar permanentemente
+                </DropdownMenuItem>
+              </>
             )}
           </DropdownMenuContent>
         </DropdownMenu>

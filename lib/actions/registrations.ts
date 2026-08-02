@@ -116,6 +116,55 @@ export async function archiveRegistration(registrationId: string, archived: bool
   return {}
 }
 
+export async function deleteRegistration(registrationId: string): Promise<{ error?: string }> {
+  const profile = await getCurrentUserProfile()
+  if (!profile || profile.role !== 'super_admin') {
+    return { error: 'Solo un super admin puede eliminar permanentemente.' }
+  }
+
+  const supabase = createAdminClient()
+
+  const { data: reg } = await supabase
+    .from('registrations')
+    .select('status, archived')
+    .eq('id', registrationId)
+    .eq('organization_id', profile.organization_id)
+    .single()
+
+  if (!reg) return { error: 'Registro no encontrado.' }
+  if (reg.status !== 'cancelled' || !reg.archived) {
+    return { error: 'Solo se pueden eliminar inscripciones canceladas y archivadas.' }
+  }
+
+  // payments y tickets referencian registrations.id sin ON DELETE CASCADE
+  // (solo attendees lo tiene, así que esa se deja al cascade). scan_logs a
+  // su vez referencia tickets.id sin cascade — si el ticket llegó a tener
+  // check-in, hay que borrar sus scan_logs antes o el delete de tickets falla.
+  const { data: ticketRows } = await supabase
+    .from('tickets')
+    .select('id')
+    .eq('registration_id', registrationId)
+  const ticketIds = (ticketRows ?? []).map((t) => t.id)
+
+  if (ticketIds.length > 0) {
+    await supabase.from('scan_logs').delete().in('ticket_id', ticketIds)
+  }
+  await supabase.from('payments').delete().eq('registration_id', registrationId)
+  await supabase.from('tickets').delete().eq('registration_id', registrationId)
+
+  const { error } = await supabase
+    .from('registrations')
+    .delete()
+    .eq('id', registrationId)
+    .eq('organization_id', profile.organization_id)
+
+  if (error) return { error: 'No se pudo eliminar.' }
+
+  revalidatePath('/admin/inscritos')
+  revalidatePath('/admin')
+  return {}
+}
+
 export async function updateAttendeeExtraData(
   attendeeId: string,
   updates: Record<string, string | boolean>
