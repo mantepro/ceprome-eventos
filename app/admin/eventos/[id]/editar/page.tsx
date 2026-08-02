@@ -64,7 +64,7 @@ export default async function EditarEventoPage({ params }: { params: Params }) {
 
       <div className="rounded-lg border p-6">
         <h2 className="text-sm font-semibold mb-4">Tipos de acceso</h2>
-        <TicketTypeSection eventId={id} ticketTypes={ticketTypes} />
+        <TicketTypeSection eventId={id} ticketTypes={ticketTypes} hideFinancials={profile.hide_financials} />
       </div>
 
       <div className="rounded-lg border p-6">

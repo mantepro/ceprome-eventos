@@ -86,29 +86,33 @@ export default async function AdminDashboard() {
           icon={CheckCircle}
           color="green"
         />
-        <StatCard
-          label="Total recaudado"
-          value={
-            Object.entries(stats.revenueByCurrency).length > 0
-              ? Object.entries(stats.revenueByCurrency).map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
-              : formatCurrency(0, 'USD')
-          }
-          icon={DollarSign}
-          color="purple"
-        />
-        <StatCard
-          label="Becas otorgadas"
-          value={
-            Object.entries(stats.scholarshipsAwardedByCurrency).length > 0
-              ? Object.entries(stats.scholarshipsAwardedByCurrency).map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
-              : formatCurrency(0, 'USD')
-          }
-          icon={GraduationCap}
-          color="rose"
-        />
+        {!profile.hide_financials && (
+          <StatCard
+            label="Total recaudado"
+            value={
+              Object.entries(stats.revenueByCurrency).length > 0
+                ? Object.entries(stats.revenueByCurrency).map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
+                : formatCurrency(0, 'USD')
+            }
+            icon={DollarSign}
+            color="purple"
+          />
+        )}
+        {!profile.hide_financials && (
+          <StatCard
+            label="Becas otorgadas"
+            value={
+              Object.entries(stats.scholarshipsAwardedByCurrency).length > 0
+                ? Object.entries(stats.scholarshipsAwardedByCurrency).map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
+                : formatCurrency(0, 'USD')
+            }
+            icon={GraduationCap}
+            color="rose"
+          />
+        )}
       </div>
 
-      {stats.scholarshipBreakdown.length > 0 && (
+      {!profile.hide_financials && stats.scholarshipBreakdown.length > 0 && (
         <div className="rounded-lg border overflow-hidden">
           <div className="px-4 py-3 border-b bg-muted/30">
             <p className="text-sm font-semibold">Desglose de becas otorgadas</p>

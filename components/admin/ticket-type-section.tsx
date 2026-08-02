@@ -20,9 +20,10 @@ const COUNTRY_SCOPE_LABELS: Record<CountryScope, string> = {
 type Props = {
   eventId: string
   ticketTypes: TicketTypeRow[]
+  hideFinancials?: boolean
 }
 
-export function TicketTypeSection({ eventId, ticketTypes }: Props) {
+export function TicketTypeSection({ eventId, ticketTypes, hideFinancials = false }: Props) {
   const boundCreate = createTicketType.bind(null, eventId)
   const [state, formAction, pending] = useActionState(boundCreate, {})
   const [countryScope, setCountryScope] = useState<CountryScope>('any')
@@ -47,7 +48,7 @@ export function TicketTypeSection({ eventId, ticketTypes }: Props) {
           </thead>
           <tbody>
             {ticketTypes.map((tt) => (
-              <TicketTypeRowItem key={tt.id} ticketType={tt} eventId={eventId} />
+              <TicketTypeRowItem key={tt.id} ticketType={tt} eventId={eventId} hideFinancials={hideFinancials} />
             ))}
           </tbody>
         </table>
@@ -129,9 +130,11 @@ export function TicketTypeSection({ eventId, ticketTypes }: Props) {
 function TicketTypeRowItem({
   ticketType,
   eventId,
+  hideFinancials,
 }: {
   ticketType: TicketTypeRow
   eventId: string
+  hideFinancials: boolean
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [togglePending, startToggleTransition] = useTransition()
@@ -159,7 +162,9 @@ function TicketTypeRowItem({
     <>
       <tr className="border-t">
         <td className="py-2 font-medium">{ticketType.name}</td>
-        <td className="py-2 text-right">{formatCurrency(ticketType.price, ticketType.currency)}</td>
+        <td className="py-2 text-right">
+          {hideFinancials ? <span className="text-muted-foreground">Oculto</span> : formatCurrency(ticketType.price, ticketType.currency)}
+        </td>
         <td className="py-2 text-right text-muted-foreground">{ticketType.capacity ?? '∞'}</td>
         <td className="py-2 text-right text-muted-foreground">{ticketType.sold_count}</td>
         <td className="py-2 text-right">

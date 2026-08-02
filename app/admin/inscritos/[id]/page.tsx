@@ -147,10 +147,12 @@ export default async function InscritoDetailPage({ params }: { params: Params })
         {ticket ? (
           <FieldGroup>
             <Field label="Tipo" value={ticket.ticket_types?.name ?? '—'} />
-            <Field
-              label="Precio"
-              value={formatCurrency(ticket.ticket_types?.price ?? 0, ticket.ticket_types?.currency ?? 'USD')}
-            />
+            {!profile.hide_financials && (
+              <Field
+                label="Precio"
+                value={formatCurrency(ticket.ticket_types?.price ?? 0, ticket.ticket_types?.currency ?? 'USD')}
+              />
+            )}
             <Field
               label="Estado"
               value={
@@ -177,7 +179,9 @@ export default async function InscritoDetailPage({ params }: { params: Params })
               label="Método"
               value={payment.method === 'manual' ? 'Transferencia / Depósito' : 'PayPal'}
             />
-            <Field label="Monto" value={formatCurrency(payment.amount, payment.currency)} />
+            {!profile.hide_financials && (
+              <Field label="Monto" value={formatCurrency(payment.amount, payment.currency)} />
+            )}
             <Field
               label="Estado"
               value={

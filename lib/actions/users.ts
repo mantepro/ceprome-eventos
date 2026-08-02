@@ -10,7 +10,8 @@ export async function inviteUser(
   email: string,
   role: Role,
   firstName?: string,
-  lastName?: string
+  lastName?: string,
+  hideFinancials?: boolean
 ): Promise<{ error: string; success: boolean }> {
   const profile = await getCurrentUserProfile()
   if (!profile || (profile.role !== 'super_admin' && profile.role !== 'org_admin')) {
@@ -64,6 +65,7 @@ export async function inviteUser(
     first_name: firstName?.trim() || null,
     last_name: lastName?.trim() || null,
     active: true,
+    hide_financials: hideFinancials ?? false,
   })
 
   if (insertError) return { error: 'Error al registrar el usuario.', success: false }
@@ -98,6 +100,39 @@ export async function toggleUserActive(
   const { error } = await admin
     .from('users')
     .update({ active: !currentActive })
+    .eq('id', userId)
+
+  if (error) return { error: 'Error al actualizar el usuario.' }
+
+  revalidatePath('/admin/usuarios')
+  return { error: '' }
+}
+
+export async function toggleHideFinancials(
+  userId: string,
+  currentValue: boolean
+): Promise<{ error: string }> {
+  const profile = await getCurrentUserProfile()
+  if (!profile || (profile.role !== 'super_admin' && profile.role !== 'org_admin')) {
+    return { error: 'No autorizado.' }
+  }
+
+  const admin = createAdminClient()
+
+  if (profile.role === 'org_admin') {
+    const { data: target } = await admin
+      .from('users')
+      .select('organization_id')
+      .eq('id', userId)
+      .single()
+    if (!target || target.organization_id !== profile.organization_id) {
+      return { error: 'Sin permisos sobre este usuario.' }
+    }
+  }
+
+  const { error } = await admin
+    .from('users')
+    .update({ hide_financials: !currentValue })
     .eq('id', userId)
 
   if (error) return { error: 'Error al actualizar el usuario.' }

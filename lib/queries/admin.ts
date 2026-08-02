@@ -10,7 +10,7 @@ export async function getCurrentUserProfile() {
   const admin = createAdminClient()
   const { data } = await admin
     .from('users')
-    .select('id, organization_id, role, first_name, last_name, email')
+    .select('id, organization_id, role, first_name, last_name, email, hide_financials')
     .eq('id', session.user.id)
     .single()
 
@@ -383,6 +383,7 @@ export type UserRow = {
   last_name: string | null
   email: string
   active: boolean
+  hide_financials: boolean
   created_at: string
   organizations: { name: string } | null
 }
@@ -391,7 +392,7 @@ export async function getOrgUsers(orgId: string, isSuperAdmin: boolean): Promise
   const supabase = createAdminClient()
   let query = supabase
     .from('users')
-    .select('id, organization_id, role, first_name, last_name, email, active, created_at, organizations(name)')
+    .select('id, organization_id, role, first_name, last_name, email, active, hide_financials, created_at, organizations(name)')
     .order('created_at', { ascending: false })
 
   if (!isSuperAdmin) {

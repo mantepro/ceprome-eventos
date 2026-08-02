@@ -36,8 +36,9 @@ export function UserInviteModal({ callerRole }: Props) {
     const role = fd.get('role') as 'org_admin' | 'event_staff'
     const firstName = fd.get('firstName') as string
     const lastName = fd.get('lastName') as string
+    const hideFinancials = fd.get('hideFinancials') === 'on'
     start(async () => {
-      const result = await inviteUser(email, role, firstName, lastName)
+      const result = await inviteUser(email, role, firstName, lastName, hideFinancials)
       if (result.error) {
         setError(result.error)
       } else {
@@ -117,6 +118,15 @@ export function UserInviteModal({ callerRole }: Props) {
                   <option value="event_staff">Escáner (event_staff)</option>
                 </select>
               </div>
+
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="hideFinancials"
+                  className="h-4 w-4 rounded"
+                />
+                Ocultar información económica
+              </label>
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 

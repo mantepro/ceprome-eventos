@@ -65,13 +65,19 @@ export async function GET(request: Request) {
     : 'todos'
   const filename = `inscritos-${eventSlug}-${ts}.xlsx`
 
+  // Los montos se omiten del todo si el usuario tiene hide_financials —
+  // esto se resuelve en el servidor para que no se pueda obtener el Excel
+  // completo por otra vía aunque el botón de exportar esté oculto en la UI.
+  const includeFinancials = !profile.hide_financials
+
   const ExcelJS = (await import('exceljs')).default
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet('Inscritos')
 
   const baseHeaders = [
     'Folio', 'Nombre', 'Apellido', 'Email', 'Teléfono',
-    'Evento', 'Tipo de acceso', 'Monto', 'Moneda',
+    'Evento', 'Tipo de acceso',
+    ...(includeFinancials ? ['Monto', 'Moneda'] : []),
     'Método de pago', 'Cupón', 'Estado', 'Fecha de inscripción',
   ]
   const pHeaders = participantFields.map(f => f.label)
@@ -129,8 +135,7 @@ export async function GET(request: Request) {
       att?.phone ?? '',
       evName,
       ticketType?.name ?? '',
-      reg.total_amount,
-      ticketType?.currency ?? '',
+      ...(includeFinancials ? [reg.total_amount, ticketType?.currency ?? ''] : []),
       reg.payment_method ? (methodMap[reg.payment_method] ?? reg.payment_method) : '',
       couponCode,
       statusMap[reg.status] ?? reg.status,
@@ -147,7 +152,9 @@ export async function GET(request: Request) {
   }
 
   const colWidths = [
-    16, 18, 18, 28, 16, 30, 20, 10, 8, 16, 14, 12, 20,
+    16, 18, 18, 28, 16, 30, 20,
+    ...(includeFinancials ? [10, 8] : []),
+    16, 14, 12, 20,
     ...participantFields.map(() => 20),
     ...internalFields.map(() => 20),
   ]
@@ -155,7 +162,9 @@ export async function GET(request: Request) {
     sheet.getColumn(i + 1).width = w
   })
 
-  sheet.getColumn(8).numFmt = '#,##0.00'
+  if (includeFinancials) {
+    sheet.getColumn(8).numFmt = '#,##0.00'
+  }
 
   const buffer = await workbook.xlsx.writeBuffer()
 

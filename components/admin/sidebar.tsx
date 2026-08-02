@@ -17,9 +17,11 @@ export async function Sidebar() {
   const profile = await getCurrentUserProfile()
   const role = profile?.role ?? null
 
-  const navItems = allNavItems.filter(
-    (item) => item.roles === null || (role !== null && item.roles.includes(role))
-  )
+  const navItems = allNavItems.filter((item) => {
+    if (item.roles !== null && (role === null || !item.roles.includes(role))) return false
+    if (item.href === '/admin/pagos' && profile?.hide_financials) return false
+    return true
+  })
 
   return (
     <aside className="w-56 shrink-0 border-r bg-background flex flex-col">

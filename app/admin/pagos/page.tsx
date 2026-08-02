@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getCurrentUserProfile, getPendingPayments, getPendingPreregs } from '@/lib/queries/admin'
 import { PaymentActions, PreregActions } from '@/components/admin/payment-actions'
 import { formatCurrency, formatDateShort } from '@/lib/utils'
@@ -11,6 +12,7 @@ function daysSince(dateStr: string): number {
 export default async function PagosPage() {
   const profile = await getCurrentUserProfile()
   if (!profile) return null
+  if (profile.hide_financials) redirect('/admin')
 
   const [payments, preregs] = await Promise.all([
     getPendingPayments(profile.organization_id),

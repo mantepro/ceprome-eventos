@@ -430,6 +430,7 @@ export interface Database {
           last_name: string | null
           email: string
           active: boolean
+          hide_financials: boolean
           created_at: string
         }
         Insert: {
@@ -440,6 +441,7 @@ export interface Database {
           last_name?: string | null
           email: string
           active?: boolean
+          hide_financials?: boolean
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['users']['Insert']>

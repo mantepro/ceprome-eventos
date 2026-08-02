@@ -7,9 +7,10 @@ import type { CouponRow } from '@/lib/queries/admin'
 
 interface Props {
   coupons: CouponRow[]
+  hideFinancials?: boolean
 }
 
-export function CouponsTable({ coupons: initial }: Props) {
+export function CouponsTable({ coupons: initial, hideFinancials = false }: Props) {
   const [coupons, setCoupons] = useState(initial)
 
   useEffect(() => {
@@ -77,7 +78,11 @@ export function CouponsTable({ coupons: initial }: Props) {
                       {c.type === 'percentage' ? 'Porcentaje' : 'Monto fijo'}
                     </td>
                     <td className="px-4 py-3 text-right font-medium">
-                      {c.type === 'percentage' ? `${c.value}%` : `$${c.value.toLocaleString()}`}
+                      {c.type === 'percentage'
+                        ? `${c.value}%`
+                        : hideFinancials
+                        ? <span className="text-muted-foreground font-normal">Oculto</span>
+                        : `$${c.value.toLocaleString()}`}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {eventName ?? <span className="italic">Global</span>}

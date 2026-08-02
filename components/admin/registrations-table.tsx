@@ -112,9 +112,10 @@ interface Props {
   orgFields: OrgField[]
   orgId: string
   isSuperAdmin?: boolean
+  hideFinancials?: boolean
 }
 
-export function RegistrationsTable({ registrations: initial, orgFields, orgId, isSuperAdmin = false }: Props) {
+export function RegistrationsTable({ registrations: initial, orgFields, orgId, isSuperAdmin = false, hideFinancials = false }: Props) {
   const [registrations, setRegistrations] = useState(initial)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -518,7 +519,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId, i
     })
   }
 
-  const show = (id: string) => !hiddenCols.has(id)
+  const show = (id: string) => !hiddenCols.has(id) && !(hideFinancials && id === 'amount')
 
   const hasActiveFilters = search || statusFilter !== 'all' || ticketTypeFilter !== 'all' || eventFilter !== 'all' || countryFilter !== 'all' || couponFilter !== 'all'
 
@@ -649,7 +650,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId, i
             </Button>
             {showColPicker && (
               <div className="absolute right-0 top-full mt-1 z-50 min-w-44 rounded-md border bg-popover p-2 shadow-md">
-                {TOGGLEABLE_COLS.map((col) => (
+                {TOGGLEABLE_COLS.filter((col) => !(hideFinancials && col.id === 'amount')).map((col) => (
                   <label
                     key={col.id}
                     className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-accent rounded"
@@ -872,6 +873,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId, i
                   onArchive={handleArchive}
                   onRequestDelete={(regId) => setPendingDelete(regId)}
                   isSuperAdmin={isSuperAdmin}
+                  hideFinancials={hideFinancials}
                   onCashPayment={(regId, ticketId, amount, currency) => {
                     setCashDoPayment(true)
                     setCashDoCheckIn(true)
@@ -921,7 +923,7 @@ function SortTH({
 function RegistrationRowItem({
   reg, rowIndex, participantFields, internalFields, hiddenCols, countryFieldId, density,
   onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn, onArchive, onRequestDelete,
-  isSuperAdmin, onCashPayment,
+  isSuperAdmin, hideFinancials, onCashPayment,
 }: {
   reg: RegistrationRow
   rowIndex: number
@@ -938,6 +940,7 @@ function RegistrationRowItem({
   onArchive: (regId: string, archived: boolean) => void
   onRequestDelete: (regId: string) => void
   isSuperAdmin: boolean
+  hideFinancials: boolean
   onCashPayment: (regId: string, ticketId: string | null, amount: number, currency: string) => void
 }) {
   const [statusPending, startStatus] = useTransition()
@@ -955,7 +958,7 @@ function RegistrationRowItem({
   const eventName = (reg.events as { name: string } | null)?.name
   const s = STATUS_LABELS[reg.status] ?? { label: reg.status, className: 'bg-gray-400 text-white' }
   const hasInternalValues = internalFields.some((f) => attendee?.extra_data?.[f.id] != null)
-  const show = (id: string) => !hiddenCols.has(id)
+  const show = (id: string) => !hiddenCols.has(id) && !(hideFinancials && id === 'amount')
 
   const rowBg = ticket?.status === 'used'
     ? '#f0fdf4'
@@ -1025,10 +1028,12 @@ function RegistrationRowItem({
           <option value="cancelled">Cancelado</option>
           <option value="refunded">Reembolsado</option>
         </select>
-        <p className={`${cellText} mt-0.5 whitespace-nowrap`}>
-          <span className="font-semibold text-foreground">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</span>
-          {reg.payment_method && <span className="text-muted-foreground"> • {METHOD_SHORT[reg.payment_method] ?? reg.payment_method}</span>}
-        </p>
+        {!hideFinancials && (
+          <p className={`${cellText} mt-0.5 whitespace-nowrap`}>
+            <span className="font-semibold text-foreground">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</span>
+            {reg.payment_method && <span className="text-muted-foreground"> • {METHOD_SHORT[reg.payment_method] ?? reg.payment_method}</span>}
+          </p>
+        )}
       </td>
       {show('ticket_type') && <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText}`}>{ticketType?.name ?? '—'}</td>}
       {show('date')   && <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText}`}>{formatDateShort(reg.created_at)}</td>}

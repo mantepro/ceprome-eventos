@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUserProfile, getOrgUsers } from '@/lib/queries/admin'
 import { UserInviteModal } from '@/components/admin/user-invite-modal'
-import { UserToggleActive } from '@/components/admin/user-actions'
+import { UserToggleActive, UserToggleHideFinancials } from '@/components/admin/user-actions'
 import { formatDateShort } from '@/lib/utils'
 
 export const metadata = { title: 'Usuarios — CEPROME Admin' }
@@ -57,6 +57,7 @@ export default async function UsuariosPage() {
                   <th className="px-4 py-3 text-left font-medium" style={TH}>Organización</th>
                 )}
                 <th className="px-4 py-3 text-left font-medium" style={TH}>Estado</th>
+                <th className="px-4 py-3 text-left font-medium" style={TH}>Info. económica</th>
                 <th className="px-4 py-3 text-left font-medium" style={TH}>Registrado</th>
                 <th className="px-4 py-3" style={TH}></th>
               </tr>
@@ -89,13 +90,21 @@ export default async function UsuariosPage() {
                         {u.active ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${u.hide_financials ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-400'}`}>
+                        {u.hide_financials ? 'Oculta' : 'Visible'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">
                       {formatDateShort(u.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {!isSelf && (
-                        <UserToggleActive userId={u.id} active={u.active} />
-                      )}
+                      <div className="flex justify-end gap-2">
+                        <UserToggleHideFinancials userId={u.id} hideFinancials={u.hide_financials} />
+                        {!isSelf && (
+                          <UserToggleActive userId={u.id} active={u.active} />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )

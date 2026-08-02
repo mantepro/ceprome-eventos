@@ -39,7 +39,7 @@ export default async function CuponesPage() {
             <p className="text-sm mt-1">Crea el primero usando el formulario de arriba.</p>
           </div>
         ) : (
-          <CouponsTable coupons={coupons} />
+          <CouponsTable coupons={coupons} hideFinancials={profile.hide_financials} />
         )}
       </section>
     </div>
