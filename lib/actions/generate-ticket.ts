@@ -104,6 +104,7 @@ export async function generateAndSendTicket(registrationId: string): Promise<voi
       folio: reg.folio,
       registrationDate: formatDate(reg.created_at),
       invoiceInstructions: eventExtra?.invoice_instructions ?? null,
+      qrDataUri: `data:image/png;base64,${qrBuffer.toString('base64')}`,
     }
     pdfBuffer = await renderComprobante(comprobanteData)
   } catch (err) {

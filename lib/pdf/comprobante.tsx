@@ -146,6 +146,24 @@ const styles = StyleSheet.create({
     color: C.guinda,
   },
 
+  // ── QR section ────────────────────────────────────────────────────────────
+  qrSection: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  qrLabel: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: C.guinda,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  qrImage: {
+    width: 140,
+    height: 140,
+  },
+
   // ── Invoice section ───────────────────────────────────────────────────────
   invoiceSection: {
     marginTop: 20,
@@ -201,6 +219,7 @@ export interface ComprobanteData {
   registrationDate: string
   docType?: 'comprobante' | 'prereg'
   invoiceInstructions?: string | null
+  qrDataUri?: string
 }
 
 function ComprobanteDocument({ data, logoUri }: { data: ComprobanteData; logoUri: string | null }) {
@@ -288,6 +307,14 @@ function ComprobanteDocument({ data, logoUri }: { data: ComprobanteData; logoUri
             <Text style={styles.folioLabel}>Folio de inscripción</Text>
             <Text style={styles.folioValue}>{data.folio}</Text>
           </View>
+
+          {/* QR */}
+          {data.qrDataUri && (
+            <View style={styles.qrSection}>
+              <Text style={styles.qrLabel}>Presenta este código QR el día del evento</Text>
+              <Image src={data.qrDataUri} style={styles.qrImage} />
+            </View>
+          )}
 
           {/* Instrucciones de factura */}
           {!isPrereg && data.invoiceInstructions ? (
