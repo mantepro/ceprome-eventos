@@ -25,7 +25,7 @@ export async function updateRegistrationStatus(
   if (newStatus === 'cancelled') {
     const { data: current } = await supabase
       .from('registrations')
-      .select('status')
+      .select('status, coupon_id')
       .eq('id', registrationId)
       .single()
 
@@ -47,6 +47,27 @@ export async function updateRegistrationStatus(
             .from('ticket_types')
             .update({ sold_count: Math.max(0, ttRow.sold_count - 1) })
             .eq('id', ticket.ticket_type_id)
+        }
+      }
+
+      if (current.coupon_id) {
+        const { data: couponRow } = await supabase
+          .from('coupons')
+          .select('used_count, max_uses, archived')
+          .eq('id', current.coupon_id)
+          .single()
+
+        if (couponRow) {
+          const newUsedCount = Math.max(0, couponRow.used_count - 1)
+          await supabase
+            .from('coupons')
+            .update({
+              used_count: newUsedCount,
+              ...(couponRow.archived && couponRow.max_uses !== null && newUsedCount < couponRow.max_uses
+                ? { archived: false }
+                : {}),
+            })
+            .eq('id', current.coupon_id)
         }
       }
     }
