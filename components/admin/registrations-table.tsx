@@ -67,6 +67,12 @@ const METHOD_SHORT: Record<string, string> = {
 
 const PAGE_SIZE = 25
 
+type Density = 'compact' | 'comfortable'
+
+const HIDDEN_COLS_STORAGE_KEY = 'inscritos-hidden-cols'
+const DENSITY_STORAGE_KEY = 'inscritos-density'
+const DEFAULT_HIDDEN_COLS = ['phone', 'event', 'amount', 'method']
+
 // Columns order matches table rendering order
 const TOGGLEABLE_COLS = [
   { id: 'ticket_type', label: 'Tipo de acceso' },
@@ -120,8 +126,9 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId, i
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(
-    new Set(['phone', 'event', 'amount', 'method'])
+    new Set(DEFAULT_HIDDEN_COLS)
   )
+  const [density, setDensity] = useState<Density>('compact')
   const [showColPicker, setShowColPicker] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null)
   const [confirmLoading, startConfirmLoading] = useTransition()
@@ -135,6 +142,43 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId, i
   const [cashDoCheckIn, setCashDoCheckIn] = useState(true)
   const colPickerRef = useRef<HTMLDivElement>(null)
   const seenFieldIds = useRef(new Set<string>())
+
+  // Restaurar preferencias guardadas — se lee en un efecto (no en el
+  // useState inicial) para que el primer render en el cliente coincida con
+  // el del servidor y no genere un hydration mismatch.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const rawCols = localStorage.getItem(HIDDEN_COLS_STORAGE_KEY)
+      if (rawCols) setHiddenCols(new Set(JSON.parse(rawCols)))
+    } catch {
+      // localStorage no disponible o valor corrupto — se queda con el default
+    }
+    try {
+      const rawDensity = localStorage.getItem(DENSITY_STORAGE_KEY)
+      if (rawDensity === 'compact' || rawDensity === 'comfortable') setDensity(rawDensity)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem(HIDDEN_COLS_STORAGE_KEY, JSON.stringify([...hiddenCols]))
+    } catch {
+      // ignore
+    }
+  }, [hiddenCols])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem(DENSITY_STORAGE_KEY, density)
+    } catch {
+      // ignore
+    }
+  }, [density])
 
   useEffect(() => {
     if (!showColPicker) return
@@ -642,6 +686,13 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId, i
               </div>
             )}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDensity((d) => (d === 'compact' ? 'comfortable' : 'compact'))}
+          >
+            {density === 'compact' ? 'Vista cómoda' : 'Vista compacta'}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExport}>
             Exportar Excel
           </Button>
@@ -795,6 +846,8 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId, i
                     Campos internos
                   </th>
                 )}
+                {/* Columna espaciadora — absorbe el ancho sobrante para que se vea como parte de la tabla */}
+                <th style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: BG_HEAD, width: '100%' }}></th>
                 <th className="px-4 py-3" style={TH_VER}></th>
               </tr>
             </thead>
@@ -810,6 +863,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId, i
                   )}
                   hiddenCols={hiddenCols}
                   countryFieldId={countryField?.id ?? null}
+                  density={density}
                   onStatusChange={handleStatusChange}
                   onRequestPaidConfirm={(regId) => setPendingConfirm(regId)}
                   onInternalSave={handleInternalSave}
@@ -865,7 +919,7 @@ function SortTH({
 }
 
 function RegistrationRowItem({
-  reg, rowIndex, participantFields, internalFields, hiddenCols, countryFieldId,
+  reg, rowIndex, participantFields, internalFields, hiddenCols, countryFieldId, density,
   onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn, onArchive, onRequestDelete,
   isSuperAdmin, onCashPayment,
 }: {
@@ -875,6 +929,7 @@ function RegistrationRowItem({
   internalFields: OrgField[]
   hiddenCols: Set<string>
   countryFieldId: string | null
+  density: Density
   onStatusChange: (id: string, status: string) => Promise<void>
   onRequestPaidConfirm: (regId: string) => void
   onInternalSave: (regId: string, attendeeId: string, updates: Record<string, string | boolean>) => void
@@ -886,6 +941,8 @@ function RegistrationRowItem({
   onCashPayment: (regId: string, ticketId: string | null, amount: number, currency: string) => void
 }) {
   const [statusPending, startStatus] = useTransition()
+  const cellText = density === 'comfortable' ? 'text-sm' : 'text-xs'
+  const cellPadding = density === 'comfortable' ? 'py-4' : 'py-3'
   const attendee = (reg.attendees as {
     id: string; first_name: string; last_name: string; email: string; phone?: string | null
     extra_data: Record<string, unknown> | null
@@ -917,25 +974,25 @@ function RegistrationRowItem({
   return (
     <tr className="transition-colors hover:brightness-95" style={{ backgroundColor: rowBg }}>
       {/* ── Sticky: Folio ── */}
-      <td className="px-4 py-3" style={{ ...STICKY_FOLIO, backgroundColor: rowBg }}>
-        <Link href={`/admin/inscritos/${reg.id}`} className="font-mono text-xs text-muted-foreground hover:underline hover:text-foreground transition-colors">
+      <td className={`px-4 ${cellPadding}`} style={{ ...STICKY_FOLIO, backgroundColor: rowBg }}>
+        <Link href={`/admin/inscritos/${reg.id}`} className="font-mono text-sm font-semibold text-foreground hover:underline transition-colors">
           {reg.folio}
         </Link>
       </td>
       {/* ── Sticky: Nombre ── */}
-      <td className="px-4 py-3" style={{ ...STICKY_NOMBRE, backgroundColor: rowBg }}>
+      <td className={`px-4 ${cellPadding}`} style={{ ...STICKY_NOMBRE, backgroundColor: rowBg }}>
         {attendee ? (
           <div>
             <Link href={`/admin/inscritos/${reg.id}`} className="font-semibold hover:underline">
               {attendee.first_name} {attendee.last_name}
             </Link>
-            <p className="text-muted-foreground text-xs">{attendee.email}</p>
+            <p className={`text-muted-foreground ${cellText}`}>{attendee.email}</p>
           </div>
         ) : <span className="text-muted-foreground">—</span>}
       </td>
       {/* ── Sticky: Check-in ── */}
       {show('acceso') && (
-        <td className="px-4 py-3 text-xs" style={{ ...STICKY_CHECKIN, backgroundColor: rowBg }}>
+        <td className={`px-4 ${cellPadding} ${cellText}`} style={{ ...STICKY_CHECKIN, backgroundColor: rowBg }}>
           {ticket?.status === 'used' && ticket.checked_in_at ? (
             <span className="inline-flex items-center gap-1 text-green-700 font-medium whitespace-nowrap">
               ✅ {formatTime(ticket.checked_in_at)}
@@ -955,7 +1012,7 @@ function RegistrationRowItem({
         </td>
       )}
       {/* ── Sticky: Pago (estado + monto • método) ── */}
-      <td className="px-4 py-3" style={{ ...STICKY_PAGO, backgroundColor: rowBg, boxShadow: SHADOW_RIGHT }}>
+      <td className={`px-4 ${cellPadding}`} style={{ ...STICKY_PAGO, backgroundColor: rowBg, boxShadow: SHADOW_RIGHT }}>
         <select
           value={reg.status}
           onChange={(e) => handleStatus(e.target.value)}
@@ -968,33 +1025,33 @@ function RegistrationRowItem({
           <option value="cancelled">Cancelado</option>
           <option value="refunded">Reembolsado</option>
         </select>
-        <p className="text-xs mt-0.5 whitespace-nowrap">
+        <p className={`${cellText} mt-0.5 whitespace-nowrap`}>
           <span className="font-semibold text-foreground">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</span>
           {reg.payment_method && <span className="text-muted-foreground"> • {METHOD_SHORT[reg.payment_method] ?? reg.payment_method}</span>}
         </p>
       </td>
-      {show('ticket_type') && <td className="px-4 py-3 text-muted-foreground text-xs">{ticketType?.name ?? '—'}</td>}
-      {show('date')   && <td className="px-4 py-3 text-muted-foreground text-xs">{formatDateShort(reg.created_at)}</td>}
+      {show('ticket_type') && <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText}`}>{ticketType?.name ?? '—'}</td>}
+      {show('date')   && <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText}`}>{formatDateShort(reg.created_at)}</td>}
       {show('pais') && countryFieldId && (
-        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+        <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText} whitespace-nowrap`}>
           {(attendee?.extra_data?.[countryFieldId] as string | undefined) ?? '—'}
         </td>
       )}
-      {show('amount') && <td className="px-4 py-3 text-right font-medium text-xs">{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</td>}
-      {show('method') && <td className="px-4 py-3 text-muted-foreground text-xs">{reg.payment_method ? (METHOD_LABELS[reg.payment_method] ?? reg.payment_method) : '—'}</td>}
+      {show('amount') && <td className={`px-4 ${cellPadding} text-right font-medium ${cellText}`}>{formatCurrency(reg.total_amount, ticketType?.currency ?? 'USD')}</td>}
+      {show('method') && <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText}`}>{reg.payment_method ? (METHOD_LABELS[reg.payment_method] ?? reg.payment_method) : '—'}</td>}
       {show('coupon') && (
-        <td className="px-4 py-3 text-muted-foreground text-xs font-mono whitespace-nowrap">
+        <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText} font-mono whitespace-nowrap`}>
           {reg.coupon_code ?? '—'}
         </td>
       )}
-      {show('phone')  && <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{attendee?.phone ?? '—'}</td>}
-      {show('event')  && <td className="px-4 py-3 text-muted-foreground text-xs">{eventName ?? '—'}</td>}
+      {show('phone')  && <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText} whitespace-nowrap`}>{attendee?.phone ?? '—'}</td>}
+      {show('event')  && <td className={`px-4 ${cellPadding} text-muted-foreground ${cellText}`}>{eventName ?? '—'}</td>}
       {participantFields.map((f) => {
         const extra = (attendee?.extra_data as Record<string, unknown>) ?? {}
         const v = extra[f.id]
         const display = v === true ? 'Sí' : v === false ? 'No' : Array.isArray(v) ? v.join(', ') : v != null ? String(v) : '—'
         return (
-          <td key={f.id} className="px-4 py-3 text-xs" style={{ backgroundColor: rowBg }}>
+          <td key={f.id} className={`px-4 ${cellPadding} ${cellText}`} style={{ backgroundColor: rowBg }}>
             <span style={{ display: 'block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={display !== '—' ? display : undefined}>{display}</span>
           </td>
         )
@@ -1012,6 +1069,8 @@ function RegistrationRowItem({
           )}
         </td>
       )}
+      {/* Columna espaciadora — absorbe el ancho sobrante para que se vea como parte de la tabla */}
+      <td style={{ width: '100%', backgroundColor: rowBg }}></td>
       {/* ── Sticky-right: menú ⋯ ── */}
       <td className="px-3 py-3" style={{ ...TD_VER, backgroundColor: rowBg }}>
         <DropdownMenu>
