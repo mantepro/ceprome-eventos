@@ -70,9 +70,11 @@ export async function confirmPaymentPublic(
     .eq('registration_id', registrationId)
     .eq('status', 'pending')
 
-  generateAndSendTicket(registrationId).catch((err) =>
+  try {
+    await generateAndSendTicket(registrationId)
+  } catch (err) {
     console.error('[confirmPaymentPublic] generateAndSendTicket:', err)
-  )
+  }
 
   return {}
 }
@@ -156,9 +158,11 @@ export async function confirmPayment(
     .eq('registration_id', registrationId)
     .eq('status', 'pending')
 
-  generateAndSendTicket(registrationId).catch((err) =>
+  try {
+    await generateAndSendTicket(registrationId)
+  } catch (err) {
     console.error('[confirmPayment] generateAndSendTicket:', err)
-  )
+  }
 
   revalidatePath('/admin/pagos')
   revalidatePath('/admin/inscritos')

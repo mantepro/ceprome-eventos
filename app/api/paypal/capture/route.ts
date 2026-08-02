@@ -59,9 +59,11 @@ export async function GET(req: NextRequest) {
         .eq('registration_id', payment.registration_id),
     ])
 
-    generateAndSendTicket(payment.registration_id).catch((err) =>
+    try {
+      await generateAndSendTicket(payment.registration_id)
+    } catch (err) {
       console.error('[paypal/capture] generateAndSendTicket:', err)
-    )
+    }
 
     return NextResponse.redirect(`${origin}${basePath}/confirmar/${folio}?pago=ok`)
   } catch {
