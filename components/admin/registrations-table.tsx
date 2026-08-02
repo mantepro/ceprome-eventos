@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, MoreHorizontal, LogIn, Trash2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, ColumnsSettings, MoreHorizontal, LogIn, Archive, ArchiveRestore } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { updateRegistrationStatus, updateAttendeeExtraData, deleteRegistration } from '@/lib/actions/registrations'
+import { updateRegistrationStatus, updateAttendeeExtraData, archiveRegistration } from '@/lib/actions/registrations'
 import { confirmPayment, type PaymentMethod } from '@/lib/actions/payments'
 import { checkInTicket, revertCheckIn, registerCashPayment } from '@/lib/actions/checkin'
 import { PaymentMethodModal } from '@/components/admin/payment-actions'
@@ -124,8 +124,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null)
   const [confirmLoading, startConfirmLoading] = useTransition()
   const [pendingCheckinConfirm, setPendingCheckinConfirm] = useState<{ regId: string; ticketId: string } | null>(null)
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
-  const [deleteLoading, startDeleteLoading] = useTransition()
+  const [showArchived, setShowArchived] = useState(false)
   const [cashPaymentTarget, setCashPaymentTarget] = useState<{ regId: string; ticketId: string | null; amount: number; currency: string } | null>(null)
   const [cashDoPayment, setCashDoPayment] = useState(true)
   const [cashDoCheckIn, setCashDoCheckIn] = useState(true)
@@ -249,6 +248,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
 
   const filtered = useMemo(() => {
     let result = registrations
+    if (!showArchived) result = result.filter((r) => !r.archived)
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       result = result.filter((r) => {
@@ -281,7 +281,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
       result = result.filter((r) => r.coupon_code === couponFilter)
     }
     return result
-  }, [registrations, search, statusFilter, ticketTypeFilter, eventFilter, countryFilter, countryField, couponFilter])
+  }, [registrations, showArchived, search, statusFilter, ticketTypeFilter, eventFilter, countryFilter, countryField, couponFilter])
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -430,16 +430,11 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
     }
   }
 
-  function handleConfirmDelete() {
-    const regId = pendingDelete
-    if (!regId) return
-    setPendingDelete(null)
-    startDeleteLoading(async () => {
-      const result = await deleteRegistration(regId)
-      if (result.error) { toast.error(result.error); return }
-      setRegistrations((prev) => prev.filter((r) => r.id !== regId))
-      toast.success('Inscripción eliminada')
-    })
+  async function handleArchive(regId: string, archived: boolean) {
+    const result = await archiveRegistration(regId, archived)
+    if (result.error) { toast.error(result.error); return }
+    setRegistrations((prev) => prev.map((r) => (r.id === regId ? { ...r, archived } : r)))
+    toast.success(archived ? 'Inscripción archivada' : 'Inscripción desarchivada')
   }
 
   function handleExport() {
@@ -496,24 +491,6 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
               setPendingCheckinConfirm(null)
             }}>
               Registrar de todos modos
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal: eliminar inscripción */}
-      <Dialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null) }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Eliminar inscripción</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Esta acción no se puede deshacer. Se eliminará permanentemente la inscripción, sus boletos y pagos.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingDelete(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleConfirmDelete} disabled={deleteLoading}>
-              {deleteLoading ? 'Eliminando…' : 'Eliminar'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -668,6 +645,16 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
           </Select>
         )}
 
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground px-1 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => { setShowArchived(e.target.checked); resetPage() }}
+            className="h-3.5 w-3.5"
+          />
+          Mostrar archivados
+        </label>
+
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
@@ -771,7 +758,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
                   onInternalSave={handleInternalSave}
                   onCheckIn={handleCheckIn}
                   onRevertCheckIn={handleRevertCheckIn}
-                  onRequestDelete={(regId) => setPendingDelete(regId)}
+                  onArchive={handleArchive}
                   onCashPayment={(regId, ticketId, amount, currency) => {
                     setCashDoPayment(true)
                     setCashDoCheckIn(true)
@@ -820,7 +807,7 @@ function SortTH({
 
 function RegistrationRowItem({
   reg, rowIndex, participantFields, internalFields, hiddenCols, countryFieldId,
-  onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn, onRequestDelete, onCashPayment,
+  onStatusChange, onRequestPaidConfirm, onInternalSave, onCheckIn, onRevertCheckIn, onArchive, onCashPayment,
 }: {
   reg: RegistrationRow
   rowIndex: number
@@ -833,7 +820,7 @@ function RegistrationRowItem({
   onInternalSave: (regId: string, attendeeId: string, updates: Record<string, string | boolean>) => void
   onCheckIn: (regId: string, ticketId: string, isPaid: boolean) => void
   onRevertCheckIn: (regId: string, ticketId: string) => void
-  onRequestDelete: (regId: string) => void
+  onArchive: (regId: string, archived: boolean) => void
   onCashPayment: (regId: string, ticketId: string | null, amount: number, currency: string) => void
 }) {
   const [statusPending, startStatus] = useTransition()
@@ -993,13 +980,16 @@ function RegistrationRowItem({
                 Revertir check-in
               </DropdownMenuItem>
             )}
-            {reg.status === 'cancelled' && (
-              <DropdownMenuItem
-                onClick={() => onRequestDelete(reg.id)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Eliminar
+            {reg.status === 'cancelled' && !reg.archived && (
+              <DropdownMenuItem onClick={() => onArchive(reg.id, true)}>
+                <Archive className="h-3.5 w-3.5" />
+                Archivar
+              </DropdownMenuItem>
+            )}
+            {reg.archived && (
+              <DropdownMenuItem onClick={() => onArchive(reg.id, false)}>
+                <ArchiveRestore className="h-3.5 w-3.5" />
+                Desarchivar
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

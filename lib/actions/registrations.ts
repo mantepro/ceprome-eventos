@@ -64,7 +64,7 @@ export async function updateRegistrationStatus(
   return {}
 }
 
-export async function deleteRegistration(registrationId: string): Promise<{ error?: string }> {
+export async function archiveRegistration(registrationId: string, archived: boolean): Promise<{ error?: string }> {
   const profile = await getCurrentUserProfile()
   if (!profile) return { error: 'No autorizado.' }
 
@@ -78,20 +78,17 @@ export async function deleteRegistration(registrationId: string): Promise<{ erro
     .single()
 
   if (!reg) return { error: 'Registro no encontrado.' }
-  if (reg.status !== 'cancelled') {
-    return { error: 'Solo se pueden eliminar inscripciones canceladas.' }
+  if (archived && reg.status !== 'cancelled') {
+    return { error: 'Solo se pueden archivar inscripciones canceladas.' }
   }
-
-  await supabase.from('payments').delete().eq('registration_id', registrationId)
-  await supabase.from('tickets').delete().eq('registration_id', registrationId)
 
   const { error } = await supabase
     .from('registrations')
-    .delete()
+    .update({ archived })
     .eq('id', registrationId)
     .eq('organization_id', profile.organization_id)
 
-  if (error) return { error: 'No se pudo eliminar la inscripción.' }
+  if (error) return { error: 'No se pudo actualizar.' }
 
   revalidatePath('/admin/inscritos')
   revalidatePath('/admin')

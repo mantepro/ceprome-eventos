@@ -178,13 +178,17 @@ export async function createRegistration(
     const adminSupa = createAdminClient()
     const { data: couponRow } = await adminSupa
       .from('coupons')
-      .select('used_count')
+      .select('used_count, max_uses')
       .eq('id', couponId)
       .single()
     if (couponRow) {
+      const newUsedCount = couponRow.used_count + 1
       await adminSupa
         .from('coupons')
-        .update({ used_count: couponRow.used_count + 1 })
+        .update({
+          used_count: newUsedCount,
+          ...(couponRow.max_uses !== null && newUsedCount >= couponRow.max_uses ? { archived: true } : {}),
+        })
         .eq('id', couponId)
     }
   }

@@ -144,7 +144,7 @@ export const getRegistrations = cache(async (orgId: string) => {
   const { data } = await supabase
     .from('registrations')
     .select(`
-      id, folio, status, payment_method, total_amount, created_at, event_id, coupon_id,
+      id, folio, status, payment_method, total_amount, created_at, event_id, coupon_id, archived,
       events(id, name),
       attendees(id, first_name, last_name, email, phone, extra_data),
       tickets(id, status, checked_in_at, ticket_types(name, currency))
@@ -335,7 +335,7 @@ export const getCoupons = cache(async (orgId: string) => {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('coupons')
-    .select('id, code, type, value, max_uses, used_count, active, count_as_scholarship, approved_by, description, event_id, created_at, events(name)')
+    .select('id, code, type, value, max_uses, used_count, active, archived, count_as_scholarship, approved_by, description, event_id, created_at, events(name)')
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })
   return data ?? []

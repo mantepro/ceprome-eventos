@@ -1,24 +1,35 @@
 'use client'
 
 import { useTransition } from 'react'
-import { toggleCouponActive, deleteCoupon } from '@/lib/actions/coupons'
+import { toggleCouponActive, archiveCoupon, deleteCoupon } from '@/lib/actions/coupons'
 import { Button } from '@/components/ui/button'
 
 interface Props {
   couponId: string
   active: boolean
+  archived: boolean
   usedCount: number
+  onArchiveChange?: (archived: boolean) => void
 }
 
-export function CouponActions({ couponId, active, usedCount }: Props) {
+export function CouponActions({ couponId, active, archived, usedCount, onArchiveChange }: Props) {
   const [toggling, startToggle] = useTransition()
+  const [archiving, startArchive] = useTransition()
   const [deleting, startDelete] = useTransition()
-  const busy = toggling || deleting
+  const busy = toggling || archiving || deleting
 
   function handleToggle() {
     startToggle(async () => {
       const result = await toggleCouponActive(couponId, active)
       if (result.error) alert(result.error)
+    })
+  }
+
+  function handleArchive(nextArchived: boolean) {
+    startArchive(async () => {
+      const result = await archiveCoupon(couponId, nextArchived)
+      if (result.error) { alert(result.error); return }
+      onArchiveChange?.(nextArchived)
     })
   }
 
@@ -41,6 +52,9 @@ export function CouponActions({ couponId, active, usedCount }: Props) {
       </span>
       <Button size="sm" variant="outline" onClick={handleToggle} disabled={busy}>
         {toggling ? '…' : active ? 'Desactivar' : 'Activar'}
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => handleArchive(!archived)} disabled={busy}>
+        {archiving ? '…' : archived ? 'Desarchivar' : 'Archivar'}
       </Button>
       {usedCount === 0 && (
         <Button

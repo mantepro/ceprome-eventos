@@ -154,6 +154,23 @@ export async function toggleCouponActive(
   return {}
 }
 
+export async function archiveCoupon(couponId: string, archived: boolean): Promise<{ error?: string }> {
+  const profile = await getCurrentUserProfile()
+  if (!profile) return { error: 'No autorizado.' }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('coupons')
+    .update({ archived })
+    .eq('id', couponId)
+    .eq('organization_id', profile.organization_id)
+
+  if (error) return { error: 'No se pudo actualizar el cupón.' }
+
+  revalidatePath('/admin/cupones')
+  return {}
+}
+
 export async function deleteCoupon(couponId: string): Promise<{ error?: string }> {
   const profile = await getCurrentUserProfile()
   if (!profile) return { error: 'No autorizado.' }

@@ -132,6 +132,7 @@ export interface Database {
           max_uses: number | null
           used_count: number
           active: boolean
+          archived: boolean
           count_as_scholarship: boolean
           approved_by: string | null
           description: string | null
@@ -148,6 +149,7 @@ export interface Database {
           max_uses?: number | null
           used_count?: number
           active?: boolean
+          archived?: boolean
           count_as_scholarship?: boolean
           approved_by?: string | null
           description?: string | null
@@ -183,6 +185,7 @@ export interface Database {
           discount_amount: number
           coupon_id: string | null
           notes: string | null
+          archived: boolean
           created_at: string
         }
         Insert: {
@@ -196,6 +199,7 @@ export interface Database {
           discount_amount?: number
           coupon_id?: string | null
           notes?: string | null
+          archived?: boolean
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['registrations']['Insert']>
