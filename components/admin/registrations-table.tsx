@@ -321,7 +321,7 @@ export function RegistrationsTable({ registrations: initial, orgFields, orgId }:
       const t = (r.tickets as { status: string }[])?.[0]
       return t?.status === 'used'
     }).length
-    const pending = active.filter(r => r.status === 'pending').length
+    const pending = active.filter(r => r.status === 'pending' || r.status === 'draft').length
     return { total, paid, checkin, pending, paidPct: total > 0 ? Math.round((paid / total) * 100) : 0 }
   }, [sorted])
 

@@ -30,7 +30,7 @@ export const getAdminStats = cache(async (orgId: string) => {
       .from('registrations')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', orgId)
-      .eq('status', 'pending'),
+      .in('status', ['draft', 'pending']),
     supabase
       .from('registrations')
       .select('total_amount')
@@ -272,13 +272,32 @@ export const getOrganizationSlug = cache(async (orgId: string): Promise<string |
 
 export const getEventTicketTypes = cache(async (eventId: string, orgId: string) => {
   const supabase = createAdminClient()
-  const { data } = await supabase
+  const { data: ticketTypes } = await supabase
     .from('ticket_types')
     .select('id, name, price, currency, capacity, sold_count, active, created_at')
     .eq('event_id', eventId)
     .eq('organization_id', orgId)
     .order('created_at', { ascending: true })
-  return data ?? []
+
+  if (!ticketTypes || ticketTypes.length === 0) return []
+
+  // sold_count en vivo, calculado de tickets/registrations reales — la
+  // columna almacenada se ha desincronizado más de una vez, así que para
+  // lo que se muestra en el admin ya no confiamos en ella.
+  const { data: tickets } = await supabase
+    .from('tickets')
+    .select('ticket_type_id, registrations(status)')
+    .in('ticket_type_id', ticketTypes.map((t) => t.id))
+
+  const liveCounts = new Map<string, number>()
+  for (const t of tickets ?? []) {
+    const status = (t.registrations as { status: string } | null)?.status
+    if (status && status !== 'cancelled') {
+      liveCounts.set(t.ticket_type_id, (liveCounts.get(t.ticket_type_id) ?? 0) + 1)
+    }
+  }
+
+  return ticketTypes.map((tt) => ({ ...tt, sold_count: liveCounts.get(tt.id) ?? 0 }))
 })
 
 export type TicketTypeRow = Awaited<ReturnType<typeof getEventTicketTypes>>[number]
