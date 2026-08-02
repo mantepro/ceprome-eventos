@@ -55,7 +55,6 @@ interface Props {
   orgSlug: string
   orgId: string
   preselectedTypeId?: string
-  preselectedPayment?: 'preregister'
   eventFields?: EventField[]
   allowPreregistration?: boolean
 }
@@ -66,11 +65,9 @@ export function RegistrationForm({
   orgSlug,
   orgId,
   preselectedTypeId,
-  preselectedPayment,
   eventFields = [],
   allowPreregistration = false,
 }: Props) {
-  const isPreregFlow = preselectedPayment === 'preregister'
   const [step, setStep] = useState<Step>(1)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -81,9 +78,7 @@ export function RegistrationForm({
   const [extraData, setExtraData] = useState<Record<string, string | boolean | string[]>>({})
   const [otherTexts, setOtherTexts] = useState<Record<string, string>>({})
   const [selectedTypeId, setSelectedTypeId] = useState(preselectedTypeId ?? '')
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>(
-    preselectedPayment ?? ''
-  )
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'manual' | 'preregister' | ''>('')
   const [couponCode, setCouponCode] = useState('')
   const [couponResult, setCouponResult] = useState<CouponValidationResult | null>(null)
   const [couponError, setCouponError] = useState('')
@@ -187,7 +182,7 @@ export function RegistrationForm({
       setStep(2)
     } else if (step === 2) {
       if (!selectedTypeId) { setError('Selecciona un tipo de inscripción.'); return }
-      if (!isPreregFlow && !paymentMethod) { setError('Selecciona un método de pago.'); return }
+      if (!paymentMethod) { setError('Selecciona un método de pago.'); return }
       setStep(3)
     }
   }
@@ -199,7 +194,7 @@ export function RegistrationForm({
 
   function handleSubmit() {
     if (!selectedTypeId) return
-    if (!isPreregFlow && !paymentMethod) return
+    if (!paymentMethod) return
     setError('')
 
     const finalExtraData: Record<string, string | boolean | string[]> = {}
@@ -219,7 +214,7 @@ export function RegistrationForm({
         lastName: lastName.trim(),
         email: email.trim(),
         phone: String(phone ?? ''),
-        paymentMethod: isPreregFlow ? 'preregister' : (paymentMethod as 'online' | 'manual'),
+        paymentMethod: paymentMethod as 'online' | 'manual' | 'preregister',
         extraData: Object.keys(finalExtraData).length > 0 ? finalExtraData : undefined,
         couponCode: couponResult?.valid ? couponCode.trim() : undefined,
       })
@@ -458,63 +453,61 @@ export function RegistrationForm({
             </div>
           )}
 
-          {!isPreregFlow && (
-            <div className="pt-3 border-t space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#a22944]">Método de pago</p>
-              {selectedType && (
-                <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
-                  <p className="text-xs text-muted-foreground mb-1">Vas a pagar</p>
-                  <p className="font-medium">{selectedType.name}</p>
-                  {couponResult?.valid ? (
-                    <div>
-                      <p className="text-sm text-muted-foreground line-through">
-                        ${selectedType.price.toLocaleString()} {selectedType.currency}
-                      </p>
-                      <p className="font-bold text-green-700">
-                        ${couponResult.finalAmount.toLocaleString()} {selectedType.currency}
-                        <span className="text-xs font-normal text-green-600 ml-1">
-                          (cupón {couponResult.type === 'percentage' ? `${couponResult.value}%` : `$${couponResult.value}`} aplicado)
-                        </span>
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="font-bold">
+          <div className="pt-3 border-t space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#a22944]">Método de pago</p>
+            {selectedType && (
+              <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
+                <p className="text-xs text-muted-foreground mb-1">Vas a pagar</p>
+                <p className="font-medium">{selectedType.name}</p>
+                {couponResult?.valid ? (
+                  <div>
+                    <p className="text-sm text-muted-foreground line-through">
                       ${selectedType.price.toLocaleString()} {selectedType.currency}
                     </p>
+                    <p className="font-bold text-green-700">
+                      ${couponResult.finalAmount.toLocaleString()} {selectedType.currency}
+                      <span className="text-xs font-normal text-green-600 ml-1">
+                        (cupón {couponResult.type === 'percentage' ? `${couponResult.value}%` : `$${couponResult.value}`} aplicado)
+                      </span>
+                    </p>
+                  </div>
+                ) : (
+                  <p className="font-bold">
+                    ${selectedType.price.toLocaleString()} {selectedType.currency}
+                  </p>
+                )}
+              </div>
+            )}
+            {paymentOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPaymentMethod(opt.value)}
+                className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
+                  paymentMethod === opt.value
+                    ? 'border-[#a22944] bg-[#a22944]/5'
+                    : 'border-border hover:border-[#a22944]/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{opt.label}</p>
+                  {opt.value === 'online' && (
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100">INMEDIATO</Badge>
+                  )}
+                  {opt.value === 'manual' && (
+                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">48 H</Badge>
                   )}
                 </div>
-              )}
-              {paymentOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setPaymentMethod(opt.value)}
-                  className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
-                    paymentMethod === opt.value
-                      ? 'border-[#a22944] bg-[#a22944]/5'
-                      : 'border-border hover:border-[#a22944]/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{opt.label}</p>
-                    {opt.value === 'online' && (
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100">INMEDIATO</Badge>
-                    )}
-                    {opt.value === 'manual' && (
-                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">48 H</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
-                </button>
-              ))}
-            </div>
-          )}
+                <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {step === 3 && selectedType && (
         <div className="space-y-4">
-          {isPreregFlow && (
+          {paymentMethod === 'preregister' && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
               <p className="font-medium mb-1">Pre-registro</p>
               <p className="text-xs">
@@ -573,12 +566,10 @@ export function RegistrationForm({
                 </p>
               )}
             </div>
-            {!isPreregFlow && (
-              <div className="px-4 py-3">
-                <p className="text-xs text-muted-foreground mb-1">Método de pago</p>
-                <p className="font-medium">{paymentLabel}</p>
-              </div>
-            )}
+            <div className="px-4 py-3">
+              <p className="text-xs text-muted-foreground mb-1">Método de pago</p>
+              <p className="font-medium">{paymentLabel}</p>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground text-center">
             Al confirmar aceptas los términos y condiciones del evento.
@@ -609,7 +600,7 @@ export function RegistrationForm({
             >
               {isPending
                 ? 'Procesando...'
-                : isPreregFlow
+                : paymentMethod === 'preregister'
                 ? 'Confirmar pre-registro'
                 : 'Confirmar inscripción'}
             </Button>

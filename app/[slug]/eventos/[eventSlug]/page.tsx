@@ -109,7 +109,7 @@ export default async function EventDetailPage({ params }: { params: Params }) {
               <p className="font-semibold text-sm mb-2">Así funciona tu inscripción</p>
               <ol className="space-y-1 text-sm text-muted-foreground list-decimal list-inside">
                 <li>Elige tu tipo de acceso y completa tus datos para apartar tu lugar.</li>
-                <li>
+                <li className="text-[15px] font-semibold text-foreground">
                   El pago es opcional en este paso: puedes pagarlo en línea de inmediato, dejarlo
                   pendiente para pagar después, o simplemente reservar tu lugar sin pagar todavía.
                 </li>
@@ -123,7 +123,6 @@ export default async function EventDetailPage({ params }: { params: Params }) {
                   ticketType={tt}
                   basePath={basePath}
                   eventSlug={eventSlug}
-                  allowPreregistration={event.allow_preregistration}
                   primary={i === 0}
                 />
               ))}

@@ -7,7 +7,7 @@ import { RegistrationForm } from '@/components/public/registration-form'
 import { publicBasePath } from '@/lib/org-domain'
 
 type Params = Promise<{ slug: string; eventSlug: string }>
-type SearchParams = Promise<{ tipo?: string; prereg?: string }>
+type SearchParams = Promise<{ tipo?: string }>
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug, eventSlug } = await params
@@ -24,7 +24,7 @@ export default async function RegistrationPage({
   searchParams: SearchParams
 }) {
   const { slug, eventSlug } = await params
-  const { tipo, prereg } = await searchParams
+  const { tipo } = await searchParams
   const org = await getOrgBySlug(slug)
   const event = await getPublishedEventBySlug(org.id, eventSlug)
   // A partir de aquí todo usa event.id (UUID real) — el slug es solo para la URL
@@ -68,7 +68,6 @@ export default async function RegistrationPage({
           orgSlug={slug}
           orgId={org.id}
           preselectedTypeId={tipo}
-          preselectedPayment={prereg === '1' ? 'preregister' : undefined}
           eventFields={eventFields}
           allowPreregistration={event.allow_preregistration}
         />

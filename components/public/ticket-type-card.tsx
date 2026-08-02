@@ -10,7 +10,6 @@ interface Props {
   ticketType: TicketType
   basePath: string
   eventSlug: string
-  allowPreregistration?: boolean
   primary?: boolean
 }
 
@@ -32,7 +31,6 @@ export function TicketTypeCard({
   ticketType,
   basePath,
   eventSlug,
-  allowPreregistration = false,
   primary = false,
 }: Props) {
   const { label, urgent, available } = getAvailability(ticketType)
@@ -75,24 +73,17 @@ export function TicketTypeCard({
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
         {available ? (
-          <>
-            <Button
-              asChild
-              variant={primary ? 'default' : 'outline'}
-              className={
-                primary
-                  ? 'w-full bg-[#a22944] text-white hover:bg-[#8a2239]'
-                  : 'w-full border-[#a22944] text-[#a22944] hover:bg-[#a22944]/10 hover:text-[#a22944]'
-              }
-            >
-              <Link href={base}>Registrarme</Link>
-            </Button>
-            {allowPreregistration && (
-              <Button asChild variant="ghost" className="w-full">
-                <Link href={`${base}&prereg=1`}>Pre-registrarme</Link>
-              </Button>
-            )}
-          </>
+          <Button
+            asChild
+            variant={primary ? 'default' : 'outline'}
+            className={
+              primary
+                ? 'w-full bg-[#a22944] text-white hover:bg-[#8a2239]'
+                : 'w-full border-[#a22944] text-[#a22944] hover:bg-[#a22944]/10 hover:text-[#a22944]'
+            }
+          >
+            <Link href={base}>Registrarme</Link>
+          </Button>
         ) : (
           <Button className="w-full" disabled>
             No disponible
