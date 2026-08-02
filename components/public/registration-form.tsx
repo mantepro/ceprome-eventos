@@ -18,22 +18,19 @@ import { COUNTRIES_ES } from '@/lib/data/countries-es'
 import { COUNTRY_NAME_TO_ISO } from '@/lib/data/country-codes'
 import type { Event, TicketType, EventField } from '@/types/database'
 
-type Step = 1 | 2 | 3 | 4
+type Step = 1 | 2 | 3
 type Bubble = 1 | 2 | 3
 
 const STEPS = ['Datos personales', 'Acceso y pago', 'Congreso']
 
 const STEP_COPY: Record<Step, { title: string; subtitle: string }> = {
   1: { title: 'Datos personales', subtitle: 'Cuéntanos quién eres para generar tu inscripción.' },
-  2: { title: 'Tipo de acceso', subtitle: 'Elige el pase con el que asistirás al congreso.' },
-  3: { title: 'Método de pago', subtitle: 'Elige cómo quieres completar tu pago. Ninguna opción te cobra automáticamente hasta que tú lo confirmes.' },
-  4: { title: 'Revisa tu inscripción', subtitle: 'Confirma que todo esté correcto antes de continuar.' },
+  2: { title: 'Acceso y pago', subtitle: 'Elige tu tipo de acceso y cómo quieres completar tu pago. Ninguna opción te cobra automáticamente hasta que tú lo confirmes.' },
+  3: { title: 'Revisa tu inscripción', subtitle: 'Confirma que todo esté correcto antes de continuar.' },
 }
 
 function toBubble(step: Step): Bubble {
-  if (step === 1) return 1
-  if (step === 4) return 3
-  return 2
+  return step
 }
 
 const OTHER_OPTION = 'Otro'
@@ -190,20 +187,14 @@ export function RegistrationForm({
       setStep(2)
     } else if (step === 2) {
       if (!selectedTypeId) { setError('Selecciona un tipo de inscripción.'); return }
-      setStep(isPreregFlow ? 4 : 3)
-    } else if (step === 3) {
-      if (!paymentMethod) { setError('Selecciona un método de pago.'); return }
-      setStep(4)
+      if (!isPreregFlow && !paymentMethod) { setError('Selecciona un método de pago.'); return }
+      setStep(3)
     }
   }
 
   function handleBack() {
     setError('')
-    if (step === 4 && isPreregFlow) {
-      setStep(2)
-    } else {
-      setStep((step - 1) as Step)
-    }
+    setStep((step - 1) as Step)
   }
 
   function handleSubmit() {
@@ -249,7 +240,7 @@ export function RegistrationForm({
     <div className="mx-auto max-w-2xl">
       <StepIndicator current={currentBubble} />
 
-      {step !== 4 && (
+      {step !== 3 && (
         <div className="mb-4 rounded-md bg-blue-50 border border-blue-200 px-4 py-2 text-xs text-blue-800 text-center">
           🔒 No se te cobrará nada hasta que elijas y confirmes tu método de pago.
         </div>
@@ -384,45 +375,48 @@ export function RegistrationForm({
       )}
 
       {step === 2 && (
-        <div className="space-y-3">
-          {ticketTypes.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No hay tipos de inscripción disponibles.
-            </p>
-          )}
-          {ticketTypes.map((tt) => {
-            const isSoldOut = tt.capacity !== null && tt.sold_count >= tt.capacity
-            const isSelected = selectedTypeId === tt.id
-            return (
-              <button
-                key={tt.id}
-                type="button"
-                disabled={isSoldOut}
-                onClick={() => !isSoldOut && handleSelectType(tt.id)}
-                className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
-                  isSelected
-                    ? 'border-[#a22944] bg-[#a22944]/5'
-                    : isSoldOut
-                    ? 'border-muted opacity-50 cursor-not-allowed'
-                    : 'border-border hover:border-[#a22944]/50'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{tt.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Acceso completo a todas las actividades del congreso.
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#a22944]">Tipo de acceso</p>
+            {ticketTypes.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No hay tipos de inscripción disponibles.
+              </p>
+            )}
+            {ticketTypes.map((tt) => {
+              const isSoldOut = tt.capacity !== null && tt.sold_count >= tt.capacity
+              const isSelected = selectedTypeId === tt.id
+              return (
+                <button
+                  key={tt.id}
+                  type="button"
+                  disabled={isSoldOut}
+                  onClick={() => !isSoldOut && handleSelectType(tt.id)}
+                  className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
+                    isSelected
+                      ? 'border-[#a22944] bg-[#a22944]/5'
+                      : isSoldOut
+                      ? 'border-muted opacity-50 cursor-not-allowed'
+                      : 'border-border hover:border-[#a22944]/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{tt.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Acceso completo a todas las actividades del congreso.
+                      </p>
+                      {isSoldOut && <p className="text-xs text-muted-foreground mt-0.5">Agotado</p>}
+                    </div>
+                    <p className="text-xl font-bold text-right shrink-0">
+                      ${tt.price.toLocaleString()}{' '}
+                      <span className="text-sm font-normal text-muted-foreground">{tt.currency}</span>
                     </p>
-                    {isSoldOut && <p className="text-xs text-muted-foreground mt-0.5">Agotado</p>}
                   </div>
-                  <p className="text-xl font-bold text-right shrink-0">
-                    ${tt.price.toLocaleString()}{' '}
-                    <span className="text-sm font-normal text-muted-foreground">{tt.currency}</span>
-                  </p>
-                </div>
-              </button>
-            )
-          })}
+                </button>
+              )
+            })}
+          </div>
 
           {selectedTypeId && (
             <div className="pt-3 border-t space-y-2">
@@ -463,61 +457,62 @@ export function RegistrationForm({
               )}
             </div>
           )}
-        </div>
-      )}
 
-      {step === 3 && !isPreregFlow && (
-        <div className="space-y-3">
-          {selectedType && (
-            <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
-              <p className="text-xs text-muted-foreground mb-1">Vas a pagar</p>
-              <p className="font-medium">{selectedType.name}</p>
-              {couponResult?.valid ? (
-                <div>
-                  <p className="text-sm text-muted-foreground line-through">
-                    ${selectedType.price.toLocaleString()} {selectedType.currency}
-                  </p>
-                  <p className="font-bold text-green-700">
-                    ${couponResult.finalAmount.toLocaleString()} {selectedType.currency}
-                    <span className="text-xs font-normal text-green-600 ml-1">
-                      (cupón {couponResult.type === 'percentage' ? `${couponResult.value}%` : `$${couponResult.value}`} aplicado)
-                    </span>
-                  </p>
+          {!isPreregFlow && (
+            <div className="pt-3 border-t space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#a22944]">Método de pago</p>
+              {selectedType && (
+                <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Vas a pagar</p>
+                  <p className="font-medium">{selectedType.name}</p>
+                  {couponResult?.valid ? (
+                    <div>
+                      <p className="text-sm text-muted-foreground line-through">
+                        ${selectedType.price.toLocaleString()} {selectedType.currency}
+                      </p>
+                      <p className="font-bold text-green-700">
+                        ${couponResult.finalAmount.toLocaleString()} {selectedType.currency}
+                        <span className="text-xs font-normal text-green-600 ml-1">
+                          (cupón {couponResult.type === 'percentage' ? `${couponResult.value}%` : `$${couponResult.value}`} aplicado)
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="font-bold">
+                      ${selectedType.price.toLocaleString()} {selectedType.currency}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="font-bold">
-                  ${selectedType.price.toLocaleString()} {selectedType.currency}
-                </p>
               )}
+              {paymentOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(opt.value)}
+                  className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
+                    paymentMethod === opt.value
+                      ? 'border-[#a22944] bg-[#a22944]/5'
+                      : 'border-border hover:border-[#a22944]/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{opt.label}</p>
+                    {opt.value === 'online' && (
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100">INMEDIATO</Badge>
+                    )}
+                    {opt.value === 'manual' && (
+                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">48 H</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+                </button>
+              ))}
             </div>
           )}
-          {paymentOptions.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setPaymentMethod(opt.value)}
-              className={`w-full text-left rounded-lg border-2 px-4 py-3 transition-colors ${
-                paymentMethod === opt.value
-                  ? 'border-[#a22944] bg-[#a22944]/5'
-                  : 'border-border hover:border-[#a22944]/50'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{opt.label}</p>
-                {opt.value === 'online' && (
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">INMEDIATO</Badge>
-                )}
-                {opt.value === 'manual' && (
-                  <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">48 H</Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
-            </button>
-          ))}
         </div>
       )}
 
-      {step === 4 && selectedType && (
+      {step === 3 && selectedType && (
         <div className="space-y-4">
           {isPreregFlow && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
@@ -602,7 +597,7 @@ export function RegistrationForm({
               </span>
             </div>
           )}
-          {step < 4 ? (
+          {step < 3 ? (
             <Button onClick={handleNext} className="bg-[#a22944] text-white hover:bg-[#8a2239]">
               Continuar
             </Button>
