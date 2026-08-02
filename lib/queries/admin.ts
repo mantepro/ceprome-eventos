@@ -218,7 +218,7 @@ export const getRegistrationById = cache(async (id: string, orgId: string) => {
     .select(`
       id, folio, status, payment_method, total_amount, notes, created_at,
       events(id, name, starts_at, location),
-      attendees(id, first_name, last_name, email, phone),
+      attendees(id, first_name, last_name, email, phone, extra_data),
       tickets(
         id, status, qr_url, kit_station_id, checked_in_at, created_at,
         ticket_types(name, price, currency)

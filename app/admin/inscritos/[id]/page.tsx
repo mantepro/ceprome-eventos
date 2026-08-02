@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
-import { getCurrentUserProfile, getRegistrationById } from '@/lib/queries/admin'
+import { getCurrentUserProfile, getRegistrationById, getAdminEventFields } from '@/lib/queries/admin'
 import { PaymentActions } from '@/components/admin/payment-actions'
 import { ResendTicketButton } from '@/components/admin/resend-ticket-button'
 import { formatCurrency, formatDateShort } from '@/lib/utils'
@@ -45,6 +45,7 @@ export default async function InscritoDetailPage({ params }: { params: Params })
 
   const attendee = (reg.attendees as {
     id: string; first_name: string; last_name: string; email: string; phone: string | null
+    extra_data: Record<string, unknown> | null
   }[])?.[0]
 
   const ticket = (reg.tickets as {
@@ -60,6 +61,7 @@ export default async function InscritoDetailPage({ params }: { params: Params })
   const event = reg.events as { id: string; name: string; starts_at: string; location: string | null } | null
   const regStatus = statusLabels[reg.status] ?? { label: reg.status, className: 'bg-gray-100 text-gray-600' }
   const pendingPayment = payment?.status === 'pending' && reg.payment_method === 'manual'
+  const eventFields = event ? await getAdminEventFields(event.id, profile.organization_id) : []
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -123,6 +125,23 @@ export default async function InscritoDetailPage({ params }: { params: Params })
           <p className="text-muted-foreground text-sm">Sin datos de asistente</p>
         )}
       </Section>
+
+      {attendee?.extra_data && eventFields.length > 0 && (
+        <Section title="Respuestas del formulario">
+          <FieldGroup>
+            {eventFields.map((field) => {
+              const raw = (attendee.extra_data as Record<string, unknown>)[field.id]
+              if (raw === undefined || raw === null || raw === '') return null
+              const value = Array.isArray(raw)
+                ? raw.join(', ')
+                : typeof raw === 'boolean'
+                ? (raw ? 'Sí' : 'No')
+                : String(raw)
+              return <Field key={field.id} label={field.label} value={value} />
+            })}
+          </FieldGroup>
+        </Section>
+      )}
 
       <Section title="Ticket">
         {ticket ? (

@@ -32,6 +32,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { RegistrationRow, OrgField } from '@/lib/queries/admin'
@@ -864,7 +865,9 @@ function RegistrationRowItem({
       <td className="px-4 py-3" style={{ ...STICKY_NOMBRE, backgroundColor: rowBg }}>
         {attendee ? (
           <div>
-            <p className="font-semibold">{attendee.first_name} {attendee.last_name}</p>
+            <Link href={`/admin/inscritos/${reg.id}`} className="font-semibold hover:underline">
+              {attendee.first_name} {attendee.last_name}
+            </Link>
             <p className="text-muted-foreground text-xs">{attendee.email}</p>
           </div>
         ) : <span className="text-muted-foreground">—</span>}
@@ -961,16 +964,20 @@ function RegistrationRowItem({
               <Link href={`/admin/inscritos/${reg.id}`}>Ver detalle</Link>
             </DropdownMenuItem>
             {reg.status !== 'paid' && (
-              <DropdownMenuItem
-                onClick={() => onCashPayment(
-                  reg.id,
-                  ticket?.id ?? null,
-                  reg.total_amount,
-                  ticketType?.currency ?? 'USD'
-                )}
-              >
-                💵 Registrar pago en efectivo
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-amber-700 focus:text-amber-700 focus:bg-amber-50"
+                  onClick={() => onCashPayment(
+                    reg.id,
+                    ticket?.id ?? null,
+                    reg.total_amount,
+                    ticketType?.currency ?? 'USD'
+                  )}
+                >
+                  💵 Registrar pago en efectivo
+                </DropdownMenuItem>
+              </>
             )}
             {ticket?.status === 'used' && ticket.id && (
               <DropdownMenuItem
