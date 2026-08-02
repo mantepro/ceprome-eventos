@@ -15,7 +15,8 @@ export async function validateCoupon(
   code: string,
   orgId: string,
   eventId: string,
-  originalPrice: number
+  originalPrice: number,
+  ticketCurrency: string
 ): Promise<CouponValidationResult> {
   if (!code.trim()) return { valid: false, error: 'Ingresa un código.' }
 
@@ -23,7 +24,7 @@ export async function validateCoupon(
 
   const { data: coupon } = await supabase
     .from('coupons')
-    .select('id, type, value, max_uses, used_count, active, event_id')
+    .select('id, type, value, currency, max_uses, used_count, active, event_id')
     .eq('organization_id', orgId)
     .ilike('code', code.trim())
     .single()
@@ -35,6 +36,9 @@ export async function validateCoupon(
   }
   if (coupon.event_id !== null && coupon.event_id !== eventId) {
     return { valid: false, error: 'Este cupón no aplica para este evento.' }
+  }
+  if (coupon.type === 'fixed' && coupon.currency && coupon.currency !== ticketCurrency) {
+    return { valid: false, error: `Este cupón es en ${coupon.currency} y no aplica para boletos en ${ticketCurrency}.` }
   }
 
   const discountAmount =
@@ -60,6 +64,7 @@ const couponSchema = z.object({
   code: z.string().min(2, 'Mínimo 2 caracteres').max(32, 'Máximo 32 caracteres'),
   type: z.enum(['percentage', 'fixed']),
   value: z.coerce.number().positive('El valor debe ser positivo'),
+  currency: z.string().max(3).optional().or(z.literal('').transform(() => undefined)),
   max_uses: z.union([z.coerce.number().int().positive(), z.literal('').transform(() => null)]).optional(),
   event_id: z.string().uuid().optional().or(z.literal('').transform(() => undefined)),
   count_as_scholarship: z.boolean().default(true),
@@ -80,6 +85,7 @@ export async function createCoupon(
     code: formData.get('code') as string,
     type: formData.get('type') as string,
     value: formData.get('value') as string,
+    currency: ((formData.get('currency') as string) || '').trim().toUpperCase(),
     max_uses: (formData.get('max_uses') as string) || '',
     event_id: (formData.get('event_id') as string) || '',
     count_as_scholarship: formData.get('count_as_scholarship') === 'on',
@@ -96,7 +102,7 @@ export async function createCoupon(
     }
   }
 
-  const { code, type, value, max_uses, event_id, count_as_scholarship, approved_by, description } = parsed.data
+  const { code, type, value, currency, max_uses, event_id, count_as_scholarship, approved_by, description } = parsed.data
   const supabase = createAdminClient()
 
   // Check uniqueness within org (case-insensitive)
@@ -115,6 +121,7 @@ export async function createCoupon(
     code: code.toUpperCase(),
     type,
     value,
+    currency: type === 'fixed' ? currency ?? null : null,
     max_uses: max_uses ?? null,
     count_as_scholarship,
     approved_by: approved_by ?? null,

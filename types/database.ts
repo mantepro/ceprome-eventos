@@ -128,6 +128,7 @@ export interface Database {
           code: string
           type: 'percentage' | 'fixed'
           value: number
+          currency: string | null
           max_uses: number | null
           used_count: number
           active: boolean
@@ -143,6 +144,7 @@ export interface Database {
           code: string
           type: 'percentage' | 'fixed'
           value: number
+          currency?: string | null
           max_uses?: number | null
           used_count?: number
           active?: boolean

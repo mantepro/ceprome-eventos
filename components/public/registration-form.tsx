@@ -173,7 +173,7 @@ export function RegistrationForm({
     setCouponError('')
     setCouponResult(null)
     startCouponTransition(async () => {
-      const result = await validateCoupon(couponCode, orgId, event.id, selectedType.price)
+      const result = await validateCoupon(couponCode, orgId, event.id, selectedType.price, selectedType.currency)
       if (!result.valid) {
         setCouponError(result.error)
       } else {

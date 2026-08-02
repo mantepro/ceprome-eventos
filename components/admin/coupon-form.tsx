@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { createCoupon, type CouponFormState } from '@/lib/actions/coupons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,7 @@ const initial: CouponFormState = {}
 
 export function CouponForm({ events }: { events: AdminEvent[] }) {
   const [state, formAction, pending] = useActionState(createCoupon, initial)
+  const [type, setType] = useState<'percentage' | 'fixed'>('percentage')
 
   return (
     <form action={formAction} className="space-y-4">
@@ -40,7 +41,8 @@ export function CouponForm({ events }: { events: AdminEvent[] }) {
         <Field label="Tipo *" error={state.errors?.type}>
           <select
             name="type"
-            defaultValue="percentage"
+            value={type}
+            onChange={(e) => setType(e.target.value as 'percentage' | 'fixed')}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="percentage">Porcentaje (%)</option>
@@ -54,6 +56,16 @@ export function CouponForm({ events }: { events: AdminEvent[] }) {
           <Input name="value" type="number" min="0.01" step="0.01" placeholder="10" />
         </Field>
 
+        {type === 'fixed' ? (
+          <Field label="Moneda (vacío = aplica a cualquiera)" error={state.errors?.currency}>
+            <Input name="currency" className="uppercase" placeholder="USD" maxLength={3} />
+          </Field>
+        ) : (
+          <input type="hidden" name="currency" value="" />
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <Field label="Límite de usos (vacío = ilimitado)" error={state.errors?.max_uses}>
           <Input name="max_uses" type="number" min="1" step="1" placeholder="Sin límite" />
         </Field>

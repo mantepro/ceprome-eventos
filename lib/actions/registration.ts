@@ -71,7 +71,7 @@ export async function createRegistration(
   let couponId: string | null = null
   let discountAmount = 0
   if (couponCode?.trim()) {
-    const couponResult = await validateCoupon(couponCode.trim(), orgId, eventId, ticketType.price)
+    const couponResult = await validateCoupon(couponCode.trim(), orgId, eventId, ticketType.price, ticketType.currency)
     if (!couponResult.valid) return { error: `Cupón inválido: ${couponResult.error}` }
     couponId = couponResult.couponId
     discountAmount = couponResult.discountAmount
