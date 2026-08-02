@@ -1024,7 +1024,7 @@ function RegistrationRowItem({
             <DropdownMenuItem asChild>
               <Link href={`/admin/inscritos/${reg.id}`}>Ver detalle</Link>
             </DropdownMenuItem>
-            {reg.status !== 'paid' && (
+            {reg.status !== 'paid' && reg.status !== 'cancelled' && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
