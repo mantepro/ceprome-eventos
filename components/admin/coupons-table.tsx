@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CouponActions } from '@/components/admin/coupon-actions'
 import { formatDateShort } from '@/lib/utils'
 import type { CouponRow } from '@/lib/queries/admin'
@@ -11,6 +11,11 @@ interface Props {
 
 export function CouponsTable({ coupons: initial }: Props) {
   const [coupons, setCoupons] = useState(initial)
+
+  useEffect(() => {
+    setCoupons(initial)
+  }, [initial])
+
   const [showArchived, setShowArchived] = useState(false)
 
   const visible = useMemo(

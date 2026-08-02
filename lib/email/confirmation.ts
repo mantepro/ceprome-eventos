@@ -35,7 +35,7 @@ function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean, l
   const paymentNote =
     paymentMethod === 'preregister'
       ? `<p style="color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin:16px 0;">
-          <strong>Pre-registro confirmado.</strong> Tu lugar está reservado. Te contactaremos con las instrucciones de pago próximamente.
+          <strong>Pre-registro confirmado.</strong> Tu lugar está reservado. Da clic en "Completar mi pago" para elegir cómo pagar — en línea al momento, o por transferencia bancaria.
          </p>`
       : paymentMethod === 'manual'
       ? `<div style="color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:16px 0;">
