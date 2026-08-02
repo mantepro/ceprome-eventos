@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import PhoneInput, { getCountryCallingCode, type Country } from 'react-phone-number-input'
 import flags from 'react-phone-number-input/flags'
 import es from 'react-phone-number-input/locale/es.json'
@@ -85,6 +85,13 @@ export function RegistrationForm({
   const [couponPending, startCouponTransition] = useTransition()
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+  const errorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (error) {
+      errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [error])
 
   const selectedType = ticketTypes.find((t) => t.id === selectedTypeId)
   const currentBubble = toBubble(step)
@@ -248,7 +255,7 @@ export function RegistrationForm({
         </div>
 
         {error && (
-          <div className="mb-4 rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+          <div ref={errorRef} className="mb-4 rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
