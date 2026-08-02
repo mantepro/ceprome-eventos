@@ -52,7 +52,7 @@ export async function createRegistration(
 
   const { data: ticketType } = await supabase
     .from('ticket_types')
-    .select('id, name, price, currency, capacity, sold_count')
+    .select('id, name, price, currency, capacity, sold_count, country_scope, country_value')
     .eq('id', ticketTypeId)
     .eq('event_id', eventId)
     .eq('organization_id', orgId)
@@ -66,6 +66,29 @@ export async function createRegistration(
     ticketType.sold_count >= ticketType.capacity
   ) {
     return { error: 'Este tipo de inscripción ya no tiene lugares disponibles.' }
+  }
+
+  // Restricción de país — respaldo de la validación que ya corre en el cliente,
+  // no confiar solo en ella. Si el evento no tiene un campo de país configurado
+  // no hay forma de verificarlo, así que se deja pasar.
+  if (ticketType.country_scope !== 'any') {
+    const { data: countryField } = await supabase
+      .from('event_fields')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('field_type', 'country')
+      .maybeSingle()
+
+    const selectedCountry = countryField ? extraData?.[countryField.id] : undefined
+    if (typeof selectedCountry === 'string' && selectedCountry) {
+      const restrictedCountry = ticketType.country_value
+      if (ticketType.country_scope === 'match' && selectedCountry !== restrictedCountry) {
+        return { error: `Este tipo de acceso es solo para personas registradas en ${restrictedCountry}.` }
+      }
+      if (ticketType.country_scope === 'exclude' && selectedCountry === restrictedCountry) {
+        return { error: `Este tipo de acceso es solo para personas registradas fuera de ${restrictedCountry}.` }
+      }
+    }
   }
 
   // Validate coupon server-side

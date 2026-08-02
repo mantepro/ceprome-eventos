@@ -99,6 +99,7 @@ export function RegistrationForm({
   const phonePairField =
     eventFields.find((f) => f.pair_with_phone) ?? eventFields.find((f) => f.field_type === 'country')
   const otherFields = eventFields.filter((f) => f.id !== phonePairField?.id)
+  const countryField = eventFields.find((f) => f.field_type === 'country')
 
   const paymentOptions = [
     {
@@ -181,6 +182,22 @@ export function RegistrationForm({
     })
   }
 
+  function validateCountryRestriction(): string | null {
+    if (!countryField || !selectedType) return null
+    if (selectedType.country_scope === 'any') return null
+    const selectedCountry = extraData[countryField.id]
+    if (typeof selectedCountry !== 'string' || !selectedCountry) return null
+
+    const restrictedCountry = selectedType.country_value
+    if (selectedType.country_scope === 'match' && selectedCountry !== restrictedCountry) {
+      return `Este tipo de acceso es solo para personas registradas en ${restrictedCountry}.`
+    }
+    if (selectedType.country_scope === 'exclude' && selectedCountry === restrictedCountry) {
+      return `Este tipo de acceso es solo para personas registradas fuera de ${restrictedCountry}.`
+    }
+    return null
+  }
+
   function handleNext() {
     setError('')
     if (step === 1) {
@@ -190,6 +207,8 @@ export function RegistrationForm({
     } else if (step === 2) {
       if (!selectedTypeId) { setError('Selecciona un tipo de inscripción.'); return }
       if (!paymentMethod) { setError('Selecciona un método de pago.'); return }
+      const countryErr = validateCountryRestriction()
+      if (countryErr) { setError(countryErr); return }
       setStep(3)
     }
   }

@@ -274,7 +274,7 @@ export const getEventTicketTypes = cache(async (eventId: string, orgId: string) 
   const supabase = createAdminClient()
   const { data: ticketTypes } = await supabase
     .from('ticket_types')
-    .select('id, name, price, currency, capacity, sold_count, active, created_at')
+    .select('id, name, price, currency, capacity, sold_count, active, country_scope, country_value, created_at')
     .eq('event_id', eventId)
     .eq('organization_id', orgId)
     .order('created_at', { ascending: true })

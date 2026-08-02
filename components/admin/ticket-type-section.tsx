@@ -6,7 +6,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createTicketType, updateTicketType, toggleTicketTypeActive } from '@/lib/actions/events'
 import { formatCurrency } from '@/lib/utils'
+import { COUNTRIES_ES } from '@/lib/data/countries-es'
 import type { TicketTypeRow } from '@/lib/queries/admin'
+
+type CountryScope = 'any' | 'match' | 'exclude'
+
+const COUNTRY_SCOPE_LABELS: Record<CountryScope, string> = {
+  any: 'Sin restricción',
+  match: 'Solo este país',
+  exclude: 'Excepto este país',
+}
 
 type Props = {
   eventId: string
@@ -16,6 +25,7 @@ type Props = {
 export function TicketTypeSection({ eventId, ticketTypes }: Props) {
   const boundCreate = createTicketType.bind(null, eventId)
   const [state, formAction, pending] = useActionState(boundCreate, {})
+  const [countryScope, setCountryScope] = useState<CountryScope>('any')
 
   return (
     <div className="space-y-4">
@@ -69,6 +79,38 @@ export function TicketTypeSection({ eventId, ticketTypes }: Props) {
               <Input name="currency" defaultValue="USD" placeholder="USD" maxLength={3} />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Label className="text-xs">Restricción de país</Label>
+              <select
+                name="country_scope"
+                value={countryScope}
+                onChange={(e) => setCountryScope(e.target.value as CountryScope)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {Object.entries(COUNTRY_SCOPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            {countryScope !== 'any' && (
+              <div className="sm:col-span-2 space-y-1">
+                <Label className="text-xs">País *</Label>
+                <select
+                  name="country_value"
+                  defaultValue=""
+                  required
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Selecciona un país…</option>
+                  {COUNTRIES_ES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {state.errors?.countryValue && (
+                  <p className="text-xs text-destructive">{state.errors.countryValue}</p>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex items-end gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Cupo (vacío = ilimitado)</Label>
@@ -93,6 +135,9 @@ function TicketTypeRowItem({
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [togglePending, startToggleTransition] = useTransition()
+  const [editCountryScope, setEditCountryScope] = useState<CountryScope>(
+    (ticketType.country_scope as CountryScope) ?? 'any'
+  )
 
   const boundUpdate = updateTicketType.bind(null, ticketType.id, eventId)
   const [editState, editFormAction, editPending] = useActionState(
@@ -181,6 +226,38 @@ function TicketTypeRowItem({
                     maxLength={3}
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="space-y-1">
+                  <Label className="text-xs">Restricción de país</Label>
+                  <select
+                    name="country_scope"
+                    value={editCountryScope}
+                    onChange={(e) => setEditCountryScope(e.target.value as CountryScope)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    {Object.entries(COUNTRY_SCOPE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                {editCountryScope !== 'any' && (
+                  <div className="sm:col-span-2 space-y-1">
+                    <Label className="text-xs">País *</Label>
+                    <select
+                      name="country_value"
+                      defaultValue={ticketType.country_value ?? ''}
+                      required
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="">Selecciona un país…</option>
+                      {COUNTRIES_ES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    {editState.errors?.countryValue && (
+                      <p className="text-xs text-destructive">{editState.errors.countryValue}</p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex items-end gap-3">
                 <div className="space-y-1">

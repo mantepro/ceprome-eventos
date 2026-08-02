@@ -262,7 +262,12 @@ const ticketTypeSchema = z.object({
   price: z.coerce.number().min(0, 'El precio no puede ser negativo'),
   currency: z.string().min(1),
   capacity: z.union([z.coerce.number().int().positive(), z.literal('').transform(() => null)]).optional(),
-})
+  countryScope: z.enum(['any', 'match', 'exclude']).default('any'),
+  countryValue: z.string().optional(),
+}).refine(
+  (data) => data.countryScope === 'any' || !!data.countryValue?.trim(),
+  { message: 'Selecciona un país para esta restricción.', path: ['countryValue'] }
+)
 
 export type TicketTypeFormState = { error?: string; errors?: Record<string, string> }
 
@@ -272,6 +277,8 @@ function parseTicketTypeFormData(formData: FormData) {
     price: formData.get('price') as string,
     currency: (formData.get('currency') as string) || 'USD',
     capacity: (formData.get('capacity') as string) || '',
+    countryScope: (formData.get('country_scope') as string) || 'any',
+    countryValue: (formData.get('country_value') as string) || '',
   }
 }
 
@@ -292,7 +299,7 @@ export async function createTicketType(
     }
   }
 
-  const { name, price, currency, capacity } = parsed.data
+  const { name, price, currency, capacity, countryScope, countryValue } = parsed.data
   const supabase = await createClient()
 
   const { error } = await supabase.from('ticket_types').insert({
@@ -302,6 +309,8 @@ export async function createTicketType(
     price,
     currency,
     capacity: capacity ?? null,
+    country_scope: countryScope,
+    country_value: countryScope === 'any' ? null : countryValue,
   })
 
   if (error) return { error: 'Error al crear el tipo de acceso.' }
@@ -328,12 +337,19 @@ export async function updateTicketType(
     }
   }
 
-  const { name, price, currency, capacity } = parsed.data
+  const { name, price, currency, capacity, countryScope, countryValue } = parsed.data
   const supabase = await createClient()
 
   const { error } = await supabase
     .from('ticket_types')
-    .update({ name, price, currency, capacity: capacity ?? null })
+    .update({
+      name,
+      price,
+      currency,
+      capacity: capacity ?? null,
+      country_scope: countryScope,
+      country_value: countryScope === 'any' ? null : countryValue,
+    })
     .eq('id', ticketTypeId)
     .eq('organization_id', profile.organization_id)
 

@@ -88,6 +88,8 @@ export interface Database {
           capacity: number | null
           sold_count: number
           active: boolean
+          country_scope: string
+          country_value: string | null
           created_at: string
         }
         Insert: {
@@ -100,6 +102,8 @@ export interface Database {
           capacity?: number | null
           sold_count?: number
           active?: boolean
+          country_scope?: string
+          country_value?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['ticket_types']['Insert']>
