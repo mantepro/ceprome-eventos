@@ -33,12 +33,16 @@ export const getAdminStats = cache(async (orgId: string) => {
       .in('status', ['draft', 'pending']),
     supabase
       .from('registrations')
-      .select('total_amount')
+      .select('total_amount, tickets(ticket_types(currency))')
       .eq('organization_id', orgId)
       .eq('status', 'paid'),
   ])
 
-  const revenue = paidResult.data?.reduce((sum, r) => sum + r.total_amount, 0) ?? 0
+  const revenueByCurrency: Record<string, number> = {}
+  for (const r of paidResult.data ?? []) {
+    const currency = (r.tickets as { ticket_types: { currency: string } | null }[])?.[0]?.ticket_types?.currency ?? 'USD'
+    revenueByCurrency[currency] = (revenueByCurrency[currency] ?? 0) + r.total_amount
+  }
 
   // Becas otorgadas — suma del descuento de registrations pagadas cuyo cupón
   // está marcado para contarse en este reporte. Se calcula aparte de `revenue`,
@@ -52,29 +56,37 @@ export const getAdminStats = cache(async (orgId: string) => {
   const couponById = new Map((scholarshipCoupons ?? []).map((c) => [c.id, c]))
   const scholarshipCouponIds = [...couponById.keys()]
 
-  let scholarshipsAwarded = 0
+  const scholarshipsAwardedByCurrency: Record<string, number> = {}
   const scholarshipBreakdown: {
     couponCode: string
     approvedBy: string | null
     description: string | null
     totalAmount: number
+    currency: string
   }[] = []
 
   if (scholarshipCouponIds.length > 0) {
     const { data: scholarshipRegs } = await supabase
       .from('registrations')
-      .select('coupon_id, discount_amount')
+      .select('coupon_id, discount_amount, tickets(ticket_types(currency))')
       .eq('organization_id', orgId)
       .eq('status', 'paid')
       .in('coupon_id', scholarshipCouponIds)
 
-    const totalsByCoupon = new Map<string, number>()
+    const totalsByCoupon = new Map<string, { couponId: string; currency: string; totalAmount: number }>()
     for (const reg of scholarshipRegs ?? []) {
       if (!reg.coupon_id) continue
-      totalsByCoupon.set(reg.coupon_id, (totalsByCoupon.get(reg.coupon_id) ?? 0) + reg.discount_amount)
+      const currency = (reg.tickets as { ticket_types: { currency: string } | null }[])?.[0]?.ticket_types?.currency ?? 'USD'
+      const key = `${reg.coupon_id}:${currency}`
+      const current = totalsByCoupon.get(key)
+      totalsByCoupon.set(key, {
+        couponId: reg.coupon_id,
+        currency,
+        totalAmount: (current?.totalAmount ?? 0) + reg.discount_amount,
+      })
     }
 
-    for (const [couponId, totalAmount] of totalsByCoupon) {
+    for (const { couponId, currency, totalAmount } of totalsByCoupon.values()) {
       const coupon = couponById.get(couponId)
       if (!coupon) continue
       scholarshipBreakdown.push({
@@ -82,19 +94,20 @@ export const getAdminStats = cache(async (orgId: string) => {
         approvedBy: coupon.approved_by,
         description: coupon.description,
         totalAmount,
+        currency,
       })
+      scholarshipsAwardedByCurrency[currency] = (scholarshipsAwardedByCurrency[currency] ?? 0) + totalAmount
     }
 
     scholarshipBreakdown.sort((a, b) => b.totalAmount - a.totalAmount)
-    scholarshipsAwarded = scholarshipBreakdown.reduce((sum, b) => sum + b.totalAmount, 0)
   }
 
   return {
     total: totalResult.count ?? 0,
     pending: pendingResult.count ?? 0,
     paid: paidResult.data?.length ?? 0,
-    revenue,
-    scholarshipsAwarded,
+    revenueByCurrency,
+    scholarshipsAwardedByCurrency,
     scholarshipBreakdown,
   }
 })

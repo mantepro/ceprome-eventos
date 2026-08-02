@@ -88,13 +88,21 @@ export default async function AdminDashboard() {
         />
         <StatCard
           label="Total recaudado"
-          value={formatCurrency(stats.revenue, 'USD')}
+          value={
+            Object.entries(stats.revenueByCurrency).length > 0
+              ? Object.entries(stats.revenueByCurrency).map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
+              : formatCurrency(0, 'USD')
+          }
           icon={DollarSign}
           color="purple"
         />
         <StatCard
           label="Becas otorgadas"
-          value={formatCurrency(stats.scholarshipsAwarded, 'USD')}
+          value={
+            Object.entries(stats.scholarshipsAwardedByCurrency).length > 0
+              ? Object.entries(stats.scholarshipsAwardedByCurrency).map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ')
+              : formatCurrency(0, 'USD')
+          }
           icon={GraduationCap}
           color="rose"
         />
@@ -116,12 +124,12 @@ export default async function AdminDashboard() {
             </thead>
             <tbody className="divide-y">
               {stats.scholarshipBreakdown.map((b) => (
-                <tr key={b.couponCode}>
+                <tr key={`${b.couponCode}-${b.currency}`}>
                   <td className="px-4 py-2 font-mono font-medium">{b.couponCode}</td>
                   <td className="px-4 py-2 text-muted-foreground">{b.approvedBy ?? '—'}</td>
                   <td className="px-4 py-2 text-muted-foreground">{b.description ?? '—'}</td>
                   <td className="px-4 py-2 text-right font-medium">
-                    {formatCurrency(b.totalAmount, 'USD')}
+                    {formatCurrency(b.totalAmount, b.currency)}
                   </td>
                 </tr>
               ))}
