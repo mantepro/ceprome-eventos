@@ -249,6 +249,12 @@ export function RegistrationForm({
     <div className="mx-auto max-w-2xl">
       <StepIndicator current={currentBubble} />
 
+      {step !== 4 && (
+        <div className="mb-4 rounded-md bg-blue-50 border border-blue-200 px-4 py-2 text-xs text-blue-800 text-center">
+          🔒 No se te cobrará nada hasta que elijas y confirmes tu método de pago.
+        </div>
+      )}
+
       <div className="rounded-lg border bg-white p-6 sm:p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">{stepCopy.title}</h1>
@@ -462,6 +468,29 @@ export function RegistrationForm({
 
       {step === 3 && !isPreregFlow && (
         <div className="space-y-3">
+          {selectedType && (
+            <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
+              <p className="text-xs text-muted-foreground mb-1">Vas a pagar</p>
+              <p className="font-medium">{selectedType.name}</p>
+              {couponResult?.valid ? (
+                <div>
+                  <p className="text-sm text-muted-foreground line-through">
+                    ${selectedType.price.toLocaleString()} {selectedType.currency}
+                  </p>
+                  <p className="font-bold text-green-700">
+                    ${couponResult.finalAmount.toLocaleString()} {selectedType.currency}
+                    <span className="text-xs font-normal text-green-600 ml-1">
+                      (cupón {couponResult.type === 'percentage' ? `${couponResult.value}%` : `$${couponResult.value}`} aplicado)
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                <p className="font-bold">
+                  ${selectedType.price.toLocaleString()} {selectedType.currency}
+                </p>
+              )}
+            </div>
+          )}
           {paymentOptions.map((opt) => (
             <button
               key={opt.value}
