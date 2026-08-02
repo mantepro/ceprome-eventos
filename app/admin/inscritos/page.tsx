@@ -16,9 +16,6 @@ export default async function InscritosPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Inscritos</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {registrations.length} inscripción{registrations.length !== 1 ? 'es' : ''} en total
-        </p>
       </div>
 
       <RegistrationsTable
