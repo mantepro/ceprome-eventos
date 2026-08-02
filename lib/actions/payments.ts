@@ -63,7 +63,13 @@ export async function confirmPaymentPublic(
     }
   }
 
-  await supabase.from('registrations').update({ status: 'paid' }).eq('id', registrationId)
+  await supabase
+    .from('registrations')
+    .update({
+      status: 'paid',
+      payment_method: (method === 'paypal' ? 'online' : method) as 'online' | 'manual',
+    })
+    .eq('id', registrationId)
   await supabase
     .from('tickets')
     .update({ status: 'active' })

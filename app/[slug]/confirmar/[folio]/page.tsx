@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { getRegistrationByFolio } from '@/lib/queries/registrations'
 import { PayPalButton } from '@/components/public/paypal-button'
 import { formatDate } from '@/lib/utils'
@@ -117,15 +118,17 @@ export default async function ConfirmationPage({
       </div>
 
       {isDraft ? (
-        <div className="rounded-lg border bg-blue-50 border-blue-200 px-4 py-4 space-y-2">
+        <div className="rounded-lg border bg-blue-50 border-blue-200 px-4 py-4 space-y-3">
           <p className="font-semibold text-blue-900">Instrucciones para completar tu pago</p>
           <p className="text-sm text-blue-800">
-            Para confirmar tu lugar, realiza tu pago y envía el comprobante indicando tu folio{' '}
-            <strong>{reg.folio}</strong>.
+            Te enviamos un correo con el link para elegir cómo pagar (en línea o por transferencia).
           </p>
-          {reg.organizations?.email && (
-            <p className="text-sm font-medium text-blue-900">{reg.organizations.email}</p>
-          )}
+          <Link
+            href={`/${slug}/pagar/${folio}`}
+            className="inline-block rounded-md bg-[#a22944] px-4 py-2 text-sm font-medium text-white hover:bg-[#8a2239] transition-colors"
+          >
+            Elegir método de pago
+          </Link>
           <p className="text-xs text-blue-700 mt-1">
             Guarda este folio — lo necesitarás para cualquier consulta.
           </p>
@@ -165,8 +168,7 @@ export default async function ConfirmationPage({
         <div className="rounded-lg border bg-amber-50 border-amber-200 px-4 py-4 space-y-2">
           <p className="font-semibold text-amber-900">Instrucciones de pago</p>
           <p className="text-sm text-amber-800">
-            Realiza tu transferencia o depósito y envía el comprobante al correo
-            del organizador.
+            Realiza tu transferencia o depósito con los datos que te compartimos.
           </p>
           {reg.organizations?.email && (
             <p className="text-sm font-medium text-amber-900">
@@ -174,7 +176,9 @@ export default async function ConfirmationPage({
             </p>
           )}
           <p className="text-xs text-amber-700 mt-2">
-            Incluye tu folio <strong>{reg.folio}</strong> en el concepto del pago.
+            Incluye tu folio <strong>{reg.folio}</strong> en el concepto del pago. Si nos compartes tu comprobante
+            al correo del organizador, agilizamos la validación — no es obligatorio, tu pago quedará confirmado en
+            cuanto lo verifiquemos.
           </p>
         </div>
       ) : null}

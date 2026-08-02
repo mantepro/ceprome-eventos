@@ -200,8 +200,10 @@ export default async function PagarPage({
             </p>
           )}
           <p className="text-xs text-muted-foreground">
-            Incluye tu folio <strong className="font-mono">{reg.folio}</strong> en el concepto del pago
-            y envía tu comprobante una vez realizada la transferencia.
+            Incluye tu folio <strong className="font-mono">{reg.folio}</strong> en el concepto del pago.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Si nos compartes tu comprobante por correo o WhatsApp, agilizamos la validación — no es obligatorio, tu elección ya quedó registrada.
           </p>
           {whatsappContact && (
             <p className="text-xs text-muted-foreground">

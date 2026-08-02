@@ -18,7 +18,7 @@ export function ConfirmTransferButton({
   if (done) {
     return (
       <p className="text-sm text-green-700 text-center">
-        ¡Gracias! Validaremos tu pago y te confirmaremos por correo.
+        Quedaste en proceso de validación. Realiza tu depósito con los datos de arriba — en cuanto confirmemos tu pago, te llegará el correo con tu QR.
       </p>
     )
   }
@@ -35,7 +35,7 @@ export function ConfirmTransferButton({
           else setDone(true)
         })}
       >
-        {isPending ? 'Guardando…' : 'Ya hice mi transferencia'}
+        {isPending ? 'Guardando…' : 'Elegir transferencia bancaria'}
       </Button>
       {error && <p className="text-sm text-destructive text-center">{error}</p>}
     </div>
