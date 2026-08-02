@@ -255,7 +255,7 @@ export function RegistrationForm({
         </div>
 
         {error && (
-          <div ref={errorRef} className="mb-4 rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+          <div ref={errorRef} className="mb-4 scroll-mt-24 rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
