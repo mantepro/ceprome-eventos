@@ -176,9 +176,9 @@ export default async function ConfirmationPage({
             </p>
           )}
           <p className="text-xs text-amber-700 mt-2">
-            Incluye tu folio <strong>{reg.folio}</strong> en el concepto del pago. Si nos compartes tu comprobante
-            al correo del organizador, agilizamos la validación — no es obligatorio, tu pago quedará confirmado en
-            cuanto lo verifiquemos.
+            Incluye tu folio <strong>{reg.folio}</strong> en el concepto del pago. Envía tu comprobante al correo
+            del organizador — es indispensable para poder validar tu pago. Tu inscripción quedará confirmada en
+            cuanto lo revisemos.
           </p>
         </div>
       ) : null}

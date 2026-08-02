@@ -97,8 +97,8 @@ export async function sendPaymentInstructionsEmail(
           </div>
           <p style="font-size:13px;color:#374151;margin:0 0 24px;">
             Al realizar tu transferencia, incluye tu folio <strong style="font-family:monospace;">${folio}</strong> en el concepto del pago.
-            Si nos compartes tu comprobante a ${orgEmail ?? 'el correo del organizador'}, agilizamos la validación —
-            no es obligatorio, tu pago quedará confirmado en cuanto lo verifiquemos.
+            Envía tu comprobante a ${orgEmail ?? 'el correo del organizador'} — es indispensable para poder validar
+            tu pago. Tu inscripción quedará confirmada en cuanto lo revisemos.
           </p>
           ` : `
           <p style="font-size:13px;color:#374151;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:0 0 24px;">

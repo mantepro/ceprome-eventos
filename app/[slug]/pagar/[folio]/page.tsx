@@ -203,7 +203,7 @@ export default async function PagarPage({
             Incluye tu folio <strong className="font-mono">{reg.folio}</strong> en el concepto del pago.
           </p>
           <p className="text-xs text-muted-foreground">
-            Si nos compartes tu comprobante por correo o WhatsApp, agilizamos la validación — no es obligatorio, tu elección ya quedó registrada.
+            Envía tu comprobante por correo o WhatsApp una vez hecho el depósito — es indispensable para poder validar tu pago.
           </p>
           {whatsappContact && (
             <p className="text-xs text-muted-foreground">

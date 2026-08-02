@@ -66,14 +66,14 @@ function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean, l
           <div style="padding:16px;white-space:pre-wrap;color:#374151;font-size:14px;line-height:1.6;">${transferInstructions}</div>
           <div style="padding:0 16px 16px;font-size:13px;color:#374151;">
             Incluye tu folio <strong style="font-family:monospace;">${folio}</strong> en el concepto del pago.
-            Si nos compartes tu comprobante a ${orgEmail ?? 'el correo del organizador'}, agilizamos la validación —
-            no es obligatorio, tu pago quedará confirmado en cuanto lo verifiquemos.
+            Envía tu comprobante a ${orgEmail ?? 'el correo del organizador'} — es indispensable para poder validar
+            tu pago. Tu inscripción quedará confirmada en cuanto lo revisemos.
           </div>
         </div>`
       : `<p style="font-size:13px;color:#374151;margin:0 0 24px;">
           Indica tu folio <strong style="font-family:monospace;">${folio}</strong> al realizar tu transferencia.
-          Si nos compartes tu comprobante a <strong>${orgEmail ?? 'el correo del organizador'}</strong>, agilizamos
-          la validación — no es obligatorio, tu pago quedará confirmado en cuanto lo verifiquemos.
+          Envía tu comprobante a <strong>${orgEmail ?? 'el correo del organizador'}</strong> — es indispensable
+          para poder validar tu pago. Tu inscripción quedará confirmada en cuanto lo revisemos.
         </p>`
     : ''
 

@@ -18,7 +18,7 @@ export function ConfirmTransferButton({
   if (done) {
     return (
       <p className="text-sm text-green-700 text-center">
-        Quedaste en proceso de validación. Realiza tu depósito con los datos de arriba — en cuanto confirmemos tu pago, te llegará el correo con tu QR.
+        Quedaste en proceso de validación. Realiza tu depósito y envíanos tu comprobante — es indispensable para poder confirmarlo. En cuanto lo revisemos, te llegará el correo con tu QR.
       </p>
     )
   }
