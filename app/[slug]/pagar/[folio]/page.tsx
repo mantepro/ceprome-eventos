@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { getRegistrationByFolio } from '@/lib/queries/registrations'
 import { getOrgBySlug } from '@/lib/queries/events'
 import { PayPalSdkButton } from '@/components/public/paypal-sdk-button'
+import { ConfirmTransferButton } from '@/components/public/confirm-transfer-button'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { publicBasePath } from '@/lib/org-domain'
 
@@ -207,6 +208,7 @@ export default async function PagarPage({
               WhatsApp de contacto: <strong>{whatsappContact}</strong>
             </p>
           )}
+          {reg.status === 'draft' && <ConfirmTransferButton folio={folio} />}
         </div>
       </div>
     </div>

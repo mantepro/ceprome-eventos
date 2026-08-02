@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -237,6 +238,9 @@ export async function createRegistration(
           transferInstructions: eventData.transfer_instructions,
           isPaid: false,
           registrationDate: formatDate(new Date().toISOString()),
+          payLink: paymentMethod === 'preregister' || paymentMethod === 'manual'
+            ? `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/${orgSlug}/pagar/${folio}`
+            : undefined,
         })
       }
     } catch (err) {
@@ -255,4 +259,42 @@ export async function createRegistration(
   )
 
   redirect(`${basePath}/confirmar/${folio}`)
+}
+
+export async function confirmManualPaymentIntent(folio: string): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+
+  const { data: reg } = await supabase
+    .from('registrations')
+    .select('id, status, total_amount, organization_id, tickets(ticket_types(currency))')
+    .eq('folio', folio)
+    .single()
+
+  if (!reg) return { error: 'Inscripción no encontrada.' }
+  if (reg.status === 'paid' || reg.status === 'cancelled') {
+    return { error: 'Esta inscripción ya fue procesada.' }
+  }
+  if (reg.status === 'pending') return {}
+
+  const currency =
+    (reg.tickets as { ticket_types: { currency: string } | null }[])?.[0]?.ticket_types?.currency ?? 'USD'
+
+  const { error: regError } = await supabase
+    .from('registrations')
+    .update({ status: 'pending', payment_method: 'manual' })
+    .eq('id', reg.id)
+
+  if (regError) return { error: 'No se pudo actualizar el registro.' }
+
+  await supabase.from('payments').insert({
+    registration_id: reg.id,
+    organization_id: reg.organization_id,
+    amount: reg.total_amount,
+    currency,
+    method: 'manual',
+    status: 'pending',
+  })
+
+  revalidatePath('/admin/pagos')
+  return {}
 }

@@ -23,10 +23,11 @@ export interface ConfirmationEmailParams {
   transferInstructions?: string | null
   registrationDate: string
   isPaid?: boolean
+  payLink?: string
 }
 
 function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean, logoUri: string | null): string {
-  const { folio, attendeeName, eventName, eventDate, eventLocation, ticketType, amount, currency, orgName, orgEmail, whatsappContact, paymentMethod, invoiceInstructions, transferInstructions, isPaid } = params
+  const { folio, attendeeName, eventName, eventDate, eventLocation, ticketType, amount, currency, orgName, orgEmail, whatsappContact, paymentMethod, invoiceInstructions, transferInstructions, isPaid, payLink } = params
 
   const formattedAmount = `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${currency}`
 
@@ -44,6 +45,16 @@ function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean, l
       : `<p style="color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px;margin:16px 0;">
           <strong>Tu pago está siendo procesado.</strong> Una vez confirmado recibirás tu ticket QR.
          </p>`
+
+  const payButton = payLink
+    ? `<div style="margin:16px 0;text-align:center;">
+        <a href="${payLink}"
+           style="display:inline-block;background:#a22944;color:#ffffff;text-decoration:none;
+                  padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
+          Completar mi pago
+        </a>
+       </div>`
+    : ''
 
   // ── Corrección 2: instrucciones de transferencia para pagos manuales ──
   const transferBlock = paymentMethod === 'manual'
@@ -97,6 +108,8 @@ function buildHtml(params: ConfirmationEmailParams, invoiceRequested: boolean, l
           <p style="margin:0 0 24px;color:#374151;">Tu inscripción al evento <strong>${eventName}</strong> ha sido registrada.</p>
 
           ${paymentNote}
+
+          ${(paymentMethod === 'preregister' || paymentMethod === 'manual') ? payButton : ''}
 
           ${transferBlock}
 

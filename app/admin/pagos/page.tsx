@@ -4,6 +4,10 @@ import { formatCurrency, formatDateShort } from '@/lib/utils'
 
 export const metadata = { title: 'Pagos pendientes — CEPROME Admin' }
 
+function daysSince(dateStr: string): number {
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
+}
+
 export default async function PagosPage() {
   const profile = await getCurrentUserProfile()
   if (!profile) return null
@@ -77,6 +81,11 @@ export default async function PagosPage() {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {formatDateShort(p.created_at)}
+                        {daysSince(p.created_at) >= 3 && (
+                          <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                            hace {daysSince(p.created_at)} días
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <PaymentActions paymentId={p.id} />
@@ -149,6 +158,11 @@ export default async function PagosPage() {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {formatDateShort(reg.created_at)}
+                        {daysSince(reg.created_at) >= 3 && (
+                          <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                            hace {daysSince(reg.created_at)} días
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <PreregActions registrationId={reg.id} />
