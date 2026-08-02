@@ -208,7 +208,7 @@ export default async function PagarPage({
               WhatsApp de contacto: <strong>{whatsappContact}</strong>
             </p>
           )}
-          {reg.status === 'draft' && <ConfirmTransferButton folio={folio} />}
+          {isActive && <ConfirmTransferButton folio={folio} alreadyConfirmed={reg.status === 'pending'} />}
         </div>
       </div>
     </div>

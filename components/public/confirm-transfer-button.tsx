@@ -4,8 +4,14 @@ import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { confirmManualPaymentIntent } from '@/lib/actions/registration'
 
-export function ConfirmTransferButton({ folio }: { folio: string }) {
-  const [done, setDone] = useState(false)
+export function ConfirmTransferButton({
+  folio,
+  alreadyConfirmed = false,
+}: {
+  folio: string
+  alreadyConfirmed?: boolean
+}) {
+  const [done, setDone] = useState(alreadyConfirmed)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
