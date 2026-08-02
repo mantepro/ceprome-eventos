@@ -104,9 +104,9 @@ export default async function PagosPage() {
       {/* ── Pre-registros ── */}
       <section className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold">Pre-registros pendientes de pago</h2>
+          <h2 className="text-base font-semibold">Registros pendientes de pago</h2>
           <p className="text-sm text-muted-foreground">
-            Asistentes que reservaron lugar y aún no han completado el pago.
+            Asistentes que reservaron lugar (con o sin transferencia iniciada) y aún no han completado el pago.
           </p>
         </div>
         {preregs.length === 0 ? (

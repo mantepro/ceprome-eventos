@@ -136,6 +136,17 @@ export type PendingPayment = Awaited<ReturnType<typeof getPendingPayments>>[numb
 
 export const getPendingPreregs = cache(async (orgId: string) => {
   const supabase = createAdminClient()
+
+  // Excluir las que ya tienen un pago manual pendiente — esas se muestran
+  // en "Pagos manuales" y no queremos duplicarlas aquí.
+  const { data: manualPending } = await supabase
+    .from('payments')
+    .select('registration_id')
+    .eq('organization_id', orgId)
+    .eq('method', 'manual')
+    .eq('status', 'pending')
+  const manualPendingIds = new Set((manualPending ?? []).map((p) => p.registration_id))
+
   const { data } = await supabase
     .from('registrations')
     .select(`
@@ -145,9 +156,10 @@ export const getPendingPreregs = cache(async (orgId: string) => {
       tickets(ticket_types(name, currency))
     `)
     .eq('organization_id', orgId)
-    .eq('status', 'draft')
+    .in('status', ['draft', 'pending'])
     .order('created_at', { ascending: false })
-  return data ?? []
+
+  return (data ?? []).filter((r) => !manualPendingIds.has(r.id))
 })
 
 export type PendingPrereg = Awaited<ReturnType<typeof getPendingPreregs>>[number]
